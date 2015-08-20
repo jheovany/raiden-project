@@ -1,0 +1,21 @@
+{
+    "name": "jh/raiden",
+    "description": "Raiden ORM project",
+    "license": "GPL",
+    "authors": [
+        {
+            "name": "Jheovany Menjivar",
+            "email": "jheovany.menjivarg@gmail.com"
+        }
+    ],
+    "minimum-stability": "dev",
+    "require": { 
+        "php": ">=5.3.0",
+        "jan-swiecki/simple-annotations": "dev-master"
+    },
+    "autoload": {
+        "psr-0": {
+            "Raiden": "src/"
+        }
+    }
+}
