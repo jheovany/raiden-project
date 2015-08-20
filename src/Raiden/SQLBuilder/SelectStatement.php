@@ -4,19 +4,19 @@ namespace Raiden\SQLBuilder;
 
 class SelectStatement {
 
+	private $table;	
+
+	private $columns = [];
+
 	private $statement;
 
-	private $columns;
+	public function setTable ( $table ) {
 
-	private $table;
-
-	public setColumns($cols) {
-
-
+		$this->table = $table;
 	}
 
-	public setTable($table) {
+	public function addColumn ( $column ) {
 
-
+		$this->columns[] = $column; 
 	}
 }
