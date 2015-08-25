@@ -1,0 +1,40 @@
+
+
+Invoice: {
+ id,
+ client: {
+  id,
+  name
+ },
+ accountNumber,
+ invoicedFrom,
+ invoicedTo,
+ total,
+ invoiceDetails: []
+}
+
+Invoice:
+{
+ classname: Invoice,
+ tablename: invoice,
+ properties: 
+ {
+  id: {
+  	fieldname: id,
+    propertyname: Id,
+    hasone: none,
+    hasmany: none 
+    },
+  client: {
+  	fieldname: client_id,
+  	propertyname: client,
+  	references: {Client},
+  },
+  invoiceDetails:
+  {
+  	fieldname: none,
+  	propertyname: invoiceDetails,
+  	references: [{InvoiceDetails}]
+  }
+ }
+}

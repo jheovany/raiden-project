@@ -19,3 +19,5 @@ class Client {
 	 * @constraint ["not null"]
 	 */
 	private $name;
+
+}

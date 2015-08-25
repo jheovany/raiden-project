@@ -15,8 +15,9 @@ class Invoice {
 	private $id;
 
 	/**
-	 * @field idClient 
-	 * @constraint [{"has one": "Client"}, "not null"]
+	 * @field idClient
+	 * @constraint ["not null"]
+	 * @hasone Raiden\TestModels\Client
 	 */
 	private $client;
 
@@ -47,7 +48,7 @@ class Invoice {
 
 	/**
 	 * @field invoiceDetails 
-	 * @constraint {"has many": "InvoiceDetails"}
+	 * @hasmany Raiden\TestModels\InvoiceDetails
 	 */
 	private $invoiceDetails;
 
