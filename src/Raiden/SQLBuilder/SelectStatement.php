@@ -25,8 +25,8 @@ class SelectStatement {
 
 	public function getSelect() {
 		
-		$this->statement['c'] = implode( ", " , $this->columns );
-		$select = implode( " ", $this->statement );
+		$this->statement['c'] = implode( ', ' , $this->columns );
+		$select = implode( ' ', $this->statement );
 
 		return $select;
 	}

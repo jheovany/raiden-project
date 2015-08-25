@@ -4,56 +4,37 @@ namespace Raiden\TestModels;
 
 
 /**
- * @table Invoice
+ * @table invoice
  */
 class Invoice {
 
 	/**
-	 * @field id 
-	 * @constraint ["primary key", "not null"]
+	 * @field id
+	 * @PK
 	 */
 	private $id;
 
 	/**
-	 * @field idClient
+	 * @field id_client
 	 * @constraint ["not null"]
 	 * @hasone Raiden\TestModels\Client
 	 */
 	private $client;
 
 	/**
-	 * @field accountNumber 
-	 * @constraint ["not null"]
-	 */
-	private $accountNumber;
-
-	/**
-	 * @field invoicedFrom 
-	 * @constraint ["not null"]
-	 */
-	private $invoicedFrom;
-
-	/**
-	 * @field invoicedTo 
-	 * @constraint ["not null"]
-	 */
-	private $invoicedTo;
-
-	/**
-	 * @field id
+	 * @field total
 	 * @type double 
 	 * @constraint ["primary key", "not null"]
 	 */
 	private $total;
 
 	/**
-	 * @field invoiceDetails 
 	 * @hasmany Raiden\TestModels\InvoiceDetails
 	 */
 	private $invoiceDetails;
 
-	public function getId()	{
+	public function getClient()	{
 
-		return $this->id;
+		return $this->client;
 	}
 }

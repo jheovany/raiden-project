@@ -4,13 +4,13 @@ namespace Raiden\TestModels;
 
 
 /**
- * @table Client
+ * @table client
  */
 class Client {
 
 	/**
-	 * @field id 
-	 * @constraint ["primary key", "not null"]
+	 * @field id
+	 * @PK
 	 */
 	private $id;
 
@@ -19,5 +19,4 @@ class Client {
 	 * @constraint ["not null"]
 	 */
 	private $name;
-
 }
