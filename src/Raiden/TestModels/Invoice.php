@@ -24,12 +24,13 @@ class Invoice {
 	/**
 	 * @field total
 	 * @type double 
-	 * @constraint ["primary key", "not null"]
+	 * 
 	 */
 	private $total;
 
 	/**
 	 * @hasmany Raiden\TestModels\InvoiceDetails
+	 * @FK id_invoice
 	 */
 	private $invoiceDetails;
 
