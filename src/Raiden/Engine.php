@@ -13,13 +13,27 @@ class Engine {
 
 	private $selectStatement;
 
-	private $metaObject = [];
+	private $metaObject;
 
 	private $fetchedObjects = [];
 
 	private $dbConnect;
 
-	public function initialize( $modelClass ) {
+	function __construct ( ) {
+		
+		$a = func_get_args(); 
+        $i = func_num_args(); 
+        if (method_exists($this,$f='__construct'.$i)) { 
+            call_user_func_array(array($this,$f),$a); 
+        } 
+	}
+
+	function __construct1 ( $modelClass ) {
+
+		$this->initialize ( $modelClass );
+	}
+
+	public function initialize ( $modelClass ) {
 
 		$this->modelClass = $modelClass;
 
@@ -52,6 +66,7 @@ class Engine {
 
 			if (array_key_exists( 'PK', $parameters->getParameters() )) {
 				$this->metaObject['PK'] = $parameters->getParameter('field');
+				$this->metaObject['properties'][$propertyName]['PK'] = $parameters->getParameter('PK');
 			}			
 
     		if (array_key_exists( 'hasone', $parameters->getParameters() )) {
@@ -83,6 +98,8 @@ class Engine {
 
 		$select = new SelectStatement;
 		$select->setTable($this->metaObject['tablename']);
+
+		//dd($this->metaObject['properties']);
 
 		foreach ($this->metaObject['properties'] as $property) {
 			
@@ -165,5 +182,38 @@ class Engine {
 	public function getSelectStatement() {
 
 		return $selectStatement;
+	}
+
+	public function save() {
+
+		$values = [];
+
+		foreach ($this->metaObject['properties'] as $property) {
+
+			if (array_key_exists( 'fieldname', $property ) and 
+				!array_key_exists( 'PK', $property ) and
+				!array_key_exists( 'hasone', $property ) ) {
+
+				$reflectionProperty = $this->reflectionClass->getProperty( $property['property'] );
+				$reflectionProperty->setAccessible(true);
+				
+				$values[ $property['fieldname'] ] = $reflectionProperty->getValue( $modelClass );
+			}
+
+			if ( array_key_exists( 'hasone', $property ) ) {
+
+			}
+		}
+
+		echo 'columnas: ';
+		var_dump($columns);
+		
+		echo 'valores: ';
+		var_dump($values);
+	}
+
+	public function getModel() {
+
+		return $this->modelClass;
 	}
 }

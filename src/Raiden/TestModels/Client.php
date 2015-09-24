@@ -15,8 +15,31 @@ class Client {
 	private $id;
 
 	/**
-	 * @field name
+	 * @field first_name
 	 * @constraint ["not null"]
 	 */
-	private $name;
+	private $firstName;
+
+	/**
+	 * @field last_name
+	 * @constraint ["not null"]
+	 */
+	private $lastName;
+
+	/**
+	 * @field dui
+	 * @constraint ["not null"]
+	 */
+	private $Dui;
+
+	/**
+	 * @field nit
+	 * @constraint ["not null"]
+	 */
+	private $Nit;
+
+	public function getFirtsName() {
+
+		return $this->firtsName;
+	}
 }

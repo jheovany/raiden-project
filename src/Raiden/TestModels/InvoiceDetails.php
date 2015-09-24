@@ -14,8 +14,24 @@ class InvoiceDetails {
 	private $id;
 
 	/**
+	 * @field id_concept
+	 * @hasone Raiden\TestModels\Concept
+	 */
+	private $concept;
+
+	/**
 	 * @field total
 	 * @type double
 	 */
 	private $total;
+
+	public function getTotal() {
+
+		return $total;
+	}
+
+	public function setTotal( $total ) {
+		
+		$this->total = $total;
+	}
 }
