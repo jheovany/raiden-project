@@ -95,9 +95,19 @@ class Engine {
 
 	public function getMetaObject () { return $this->metaObject; }
 
-	public function getReflectionClass () { return $this->reflectionClass; }	
+	public function getReflectionClass () { return $this->reflectionClass; }
 
-	public function find( $id, $field = null ) {
+	public function findByPK( $id ){
+
+		return $this->find($id);
+	}	
+
+	public function findWhere($cond){
+		
+		return $this->find($cond, true);
+	}	
+
+	public function find( $cond, $isWhere = false ) {
 
 		$this->fetchedObjects = null;
 
@@ -114,11 +124,12 @@ class Engine {
 			}
 		}
 
-		if ( !$field ) {
-			$field = $this->metaObject['PK'];
+		if ($isWhere) {
+			$select->setCondition("WHERE " . $cond);			
+		} else {
+			$pkey = $this->metaObject['PK'];
+			$select->setCondition("WHERE $pkey = " . $cond);
 		}
-
-		$select->setCondition("WHERE $field = " . $id);
 
 		$db = (new Connect)->getConnection();
 		$queryString = $select->getSelect();
@@ -127,7 +138,11 @@ class Engine {
 		$statement = $db->prepare( $queryString );
 		$statement->execute();
 
-		$rows = $statement->fetchAll();
+		$rows = $statement->fetchAll(); 
+
+		//echo 'class: ' . $this->metaObject['classname'] . '<br>';
+		//echo 'table: ' . $this->metaObject['tablename'];
+		//var_dump($rows);
 
 		foreach ($rows as $row) {
 				
@@ -145,7 +160,6 @@ class Engine {
 					$reflectionProperty->setAccessible(true);
 					$reflectionProperty->setValue( $object, $row[$property['fieldname']]);
 					$fk = $reflectionProperty->getValue( $object );
-					//var_dump($fk);
 				}
 
 				if (array_key_exists( 'hasone', $property )) {	
@@ -154,11 +168,11 @@ class Engine {
 
 					$engine = $property['engine'];
 
- 					$hasOneObject	= $engine->find( $fk );
+ 					$hasOneObject = $engine->findByPK( $fk );
 
  					$reflectionProperty = $this->reflectionClass->getProperty( $property['property'] );
 					$reflectionProperty->setAccessible(true);
-					$reflectionProperty->setValue( $object, $hasOneObject[0]);
+					$reflectionProperty->setValue( $object, $hasOneObject);
 				}
 
 				if (array_key_exists( 'hasmany', $property )) {
@@ -170,7 +184,7 @@ class Engine {
 
 					$engine = $property['engine'];
 
- 					$hasManyObjects	= $engine->find($value, $fk);
+ 					$hasManyObjects	= $engine->findWhere("$fk = $value");
 
  					$reflectionProperty = $this->reflectionClass->getProperty( $property['property'] );
 					$reflectionProperty->setAccessible(true);
@@ -181,7 +195,14 @@ class Engine {
 			$this->fetchedObjects[] = $object; 	
 		}
 
-		return $this->fetchedObjects;
+		//echo 'fetched objects:';
+		//var_dump($this->fetchedObjects);
+
+		if (!$isWhere) {
+			return $this->fetchedObjects[0];
+		} else {
+			return $this->fetchedObjects;
+		}
 	}
 
 	public function getSelectStatement() {
@@ -189,9 +210,21 @@ class Engine {
 		return $selectStatement;
 	}
 
-	public function save() {
+	public function save(){
+
+		return $this->privateSave();
+	}
+
+	private function privateSave( $addVals = null ) {
 
 		$values = [];
+
+		//echo 'valores adicionales';
+		//var_dump($addVals);
+
+		if (!is_null($addVals)) {
+			$values[key($addVals)] = $addVals[key($addVals)];	
+		}
 
 		$insert = new Statements;
 
@@ -215,8 +248,8 @@ class Engine {
 
 				$object = $reflectionProperty->getValue( $this->modelClass );
 
-				echo 'has one :';
-				var_dump($object);
+				//echo 'has one :';
+				//var_dump($object);
 
 				$objectEngine = new Engine( $object );
 
@@ -224,30 +257,15 @@ class Engine {
 
 				$refClass = $objectEngine->getReflectionClass();
 
-				echo 'pk: ';
-				var_dump($pk);
-
 				$reflectionProperty2 = $refClass->getProperty( $pk );
 				$reflectionProperty2->setAccessible(true);
 
 				$values[ $property['fieldname'] ] = $reflectionProperty2->getValue( $object ); 
 			}
-
-			if ( array_key_exists ( 'hasmany', $property ) ) {
-				$reflectionProperty = $this->reflectionClass->getProperty( $property['property'] );
-				$reflectionProperty->setAccessible(true);
-
-				$objects = $reflectionProperty->getValue( $this->modelClass );
-
-				echo 'has many :';
-				var_dump($objects);
-
-			}
-
 		}
 	
-		echo 'valores: ';
-		var_dump($values);
+		//echo 'valores: ';
+		//var_dump($values);
 
 		$sql = $insert->getInsert($values);
 
@@ -257,6 +275,37 @@ class Engine {
 
 		$statement = $db->prepare( $queryString );
 		$statement->execute();
+
+		$lastId = $db->lastInsertId(); 
+
+		echo 'last id: ';
+		var_dump($lastId);
+
+
+
+		foreach ($this->metaObject['properties'] as $property) {
+			if ( array_key_exists ( 'hasmany', $property ) ) {
+				$reflectionProperty = $this->reflectionClass->getProperty( $property['property'] );
+				$reflectionProperty->setAccessible(true);
+
+				$objects = $reflectionProperty->getValue( $this->modelClass );
+
+				$value[$property['FK']] = $lastId;
+
+				echo 'valores adicionales :';
+				var_dump($value);
+
+				foreach ($objects as $obj) {
+					$engine = new Engine($obj);
+
+					$reflexionMethod = new \ReflectionMethod($engine, 'privateSave');
+					$reflexionMethod->setAccessible(true);
+					$reflexionMethod->invoke($engine, $value);
+				}
+			}
+		}
+
+		return $this->findByPK($lastId);
 	}
 
 	public function getModel() {

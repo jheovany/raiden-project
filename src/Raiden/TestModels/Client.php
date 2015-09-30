@@ -38,8 +38,8 @@ class Client {
 	 */
 	private $Nit;
 
-	public function getFirtsName() {
+	public function getFirstName() {
 
-		return $this->firtsName;
+		return $this->firstName;
 	}
 }
