@@ -25,6 +25,16 @@ class InvoiceDetails {
 	 */
 	private $total;
 
+	public function setValues ( $concept, $total ) {
+
+		$this->concept = $concept;
+		$this->total = $total;
+	}
+
+	public function getConcept() {
+		return $this->concept;
+	}
+
 	public function getTotal() {
 
 		return $total;

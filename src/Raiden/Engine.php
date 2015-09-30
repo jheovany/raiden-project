@@ -3,6 +3,7 @@
 namespace Raiden;
 
 use Raiden\SQLBuilder\SelectStatement;
+use Raiden\SQLBuilder\Statements;
 use DocBlockReader\Reader;
 
 class Engine {
@@ -94,7 +95,11 @@ class Engine {
 
 	public function getMetaObject () { return $this->metaObject; }
 
+	public function getReflectionClass () { return $this->reflectionClass; }	
+
 	public function find( $id, $field = null ) {
+
+		$this->fetchedObjects = null;
 
 		$select = new SelectStatement;
 		$select->setTable($this->metaObject['tablename']);
@@ -188,6 +193,10 @@ class Engine {
 
 		$values = [];
 
+		$insert = new Statements;
+
+		$insert->setTable($this->metaObject['tablename']);
+
 		foreach ($this->metaObject['properties'] as $property) {
 
 			if (array_key_exists( 'fieldname', $property ) and 
@@ -197,19 +206,57 @@ class Engine {
 				$reflectionProperty = $this->reflectionClass->getProperty( $property['property'] );
 				$reflectionProperty->setAccessible(true);
 				
-				$values[ $property['fieldname'] ] = $reflectionProperty->getValue( $modelClass );
+				$values[ $property['fieldname'] ] = $reflectionProperty->getValue( $this->modelClass );
 			}
 
 			if ( array_key_exists( 'hasone', $property ) ) {
+				$reflectionProperty = $this->reflectionClass->getProperty( $property['property'] );
+				$reflectionProperty->setAccessible(true);
+
+				$object = $reflectionProperty->getValue( $this->modelClass );
+
+				echo 'has one :';
+				var_dump($object);
+
+				$objectEngine = new Engine( $object );
+
+				$pk = $objectEngine->getMetaObject()['PK'];
+
+				$refClass = $objectEngine->getReflectionClass();
+
+				echo 'pk: ';
+				var_dump($pk);
+
+				$reflectionProperty2 = $refClass->getProperty( $pk );
+				$reflectionProperty2->setAccessible(true);
+
+				$values[ $property['fieldname'] ] = $reflectionProperty2->getValue( $object ); 
+			}
+
+			if ( array_key_exists ( 'hasmany', $property ) ) {
+				$reflectionProperty = $this->reflectionClass->getProperty( $property['property'] );
+				$reflectionProperty->setAccessible(true);
+
+				$objects = $reflectionProperty->getValue( $this->modelClass );
+
+				echo 'has many :';
+				var_dump($objects);
 
 			}
-		}
 
-		echo 'columnas: ';
-		var_dump($columns);
-		
+		}
+	
 		echo 'valores: ';
 		var_dump($values);
+
+		$sql = $insert->getInsert($values);
+
+		$db = (new Connect)->getConnection();
+		$queryString = $sql;
+		var_dump( $queryString );
+
+		$statement = $db->prepare( $queryString );
+		$statement->execute();
 	}
 
 	public function getModel() {

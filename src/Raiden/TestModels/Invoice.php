@@ -14,6 +14,12 @@ class Invoice {
 	private $id;
 
 	/**
+	 * @field code
+	 * 
+	 */
+	private $code;
+
+	/**
 	 * @field id_client
 	 * @hasone Raiden\TestModels\Client
 	 */
@@ -23,7 +29,7 @@ class Invoice {
 	 * @hasmany Raiden\TestModels\InvoiceDetails
 	 * @FK id_invoice
 	 */
-	private $details;
+	private $details = [];
 
 	public function setValues ( $client, $details ) {
 
@@ -41,6 +47,15 @@ class Invoice {
 		return $this->client;
 	}
 
+	public function setClient( $client ) {
+
+		$this->client = $client;
+	}
+
+	public function setCode($code){
+		$this->code = $code;
+	}
+
 	public function  getTotal() {
 
 		return $this->total;
@@ -51,4 +66,7 @@ class Invoice {
 		return $this->invoiceDetails;
 	}
 
+	public function addDetail($det) {
+		$this->details[] = $det;
+	}
 }
