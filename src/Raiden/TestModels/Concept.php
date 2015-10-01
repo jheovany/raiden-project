@@ -19,4 +19,9 @@ class Concept {
 	 *
 	 */
 	private $description;
+
+	public function getDescription(){
+
+		return $this->description;
+	}
 }

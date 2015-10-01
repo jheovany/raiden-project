@@ -68,7 +68,7 @@ class Invoice {
 
 	public function  getDetails() {
 
-		return $this->invoiceDetails;
+		return $this->details;
 	}
 
 	public function addDetail($det) {

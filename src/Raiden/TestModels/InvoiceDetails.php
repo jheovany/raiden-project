@@ -31,13 +31,17 @@ class InvoiceDetails {
 		$this->total = $total;
 	}
 
+	public function getId() {
+		return $this->id;
+	}	
+
 	public function getConcept() {
 		return $this->concept;
 	}
 
 	public function getTotal() {
 
-		return $total;
+		return $this->total;
 	}
 
 	public function setTotal( $total ) {
