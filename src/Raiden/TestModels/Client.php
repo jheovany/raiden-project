@@ -18,28 +18,33 @@ class Client {
 	 * @field first_name
 	 * @constraint ["not null"]
 	 */
-	private $firstName;
+	private $firstname;
 
 	/**
 	 * @field last_name
 	 * @constraint ["not null"]
 	 */
-	private $lastName;
+	private $lastname;
 
 	/**
 	 * @field dui
 	 * @constraint ["not null"]
 	 */
-	private $Dui;
+	private $dui;
 
 	/**
 	 * @field nit
 	 * @constraint ["not null"]
 	 */
-	private $Nit;
+	private $nit;
 
-	public function getFirstName() {
+	public function getFirstname() {
 
-		return $this->firstName;
+		return $this->firstname;
+	}
+
+	public function getLastname() {
+
+		return $this->lastname;
 	}
 }

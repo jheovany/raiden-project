@@ -5,7 +5,7 @@ namespace Raiden\SQLBuilder;
 /**
 * 
 */
-class Statements  {
+class InsertStatement  {
 	
 	private $table;	
 

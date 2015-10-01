@@ -3,7 +3,8 @@
 namespace Raiden;
 
 use Raiden\SQLBuilder\SelectStatement;
-use Raiden\SQLBuilder\Statements;
+use Raiden\SQLBuilder\InsertStatement;
+use Raiden\SQLBuilder\UpdateStatement;
 use DocBlockReader\Reader;
 
 class Engine {
@@ -97,17 +98,22 @@ class Engine {
 
 	public function getReflectionClass () { return $this->reflectionClass; }
 
-	public function findByPK( $id ){
+	public function findByPK( $id ) {
 
 		return $this->find($id);
 	}	
 
-	public function findWhere($cond){
+	public function findWhere($cond) {
 		
 		return $this->find($cond, true);
+	}
+
+	public function findAll($limit = 100) {
+
+		return $this->find($limit, false, true);
 	}	
 
-	public function find( $cond, $isWhere = false ) {
+	public function find( $cond, $isWhere = false, $isLimit = false ) {
 
 		$this->fetchedObjects = null;
 
@@ -125,7 +131,9 @@ class Engine {
 		}
 
 		if ($isWhere) {
-			$select->setCondition("WHERE " . $cond);			
+			$select->setCondition("WHERE " . $cond);
+		} else if ($isLimit) {
+			$select->setCondition("LIMIT " . $cond);
 		} else {
 			$pkey = $this->metaObject['PK'];
 			$select->setCondition("WHERE $pkey = " . $cond);
@@ -133,7 +141,7 @@ class Engine {
 
 		$db = (new Connect)->getConnection();
 		$queryString = $select->getSelect();
-		var_dump( $queryString );
+		//var_dump( $queryString );
 
 		$statement = $db->prepare( $queryString );
 		$statement->execute();
@@ -198,7 +206,8 @@ class Engine {
 		//echo 'fetched objects:';
 		//var_dump($this->fetchedObjects);
 
-		if (!$isWhere) {
+		if (!$isWhere and !$isLimit) {
+			$this->modelClass = $this->fetchedObjects[0];
 			return $this->fetchedObjects[0];
 		} else {
 			return $this->fetchedObjects;
@@ -219,14 +228,11 @@ class Engine {
 
 		$values = [];
 
-		//echo 'valores adicionales';
-		//var_dump($addVals);
-
 		if (!is_null($addVals)) {
 			$values[key($addVals)] = $addVals[key($addVals)];	
 		}
 
-		$insert = new Statements;
+		$insert = new InsertStatement;
 
 		$insert->setTable($this->metaObject['tablename']);
 
@@ -312,4 +318,53 @@ class Engine {
 
 		return $this->modelClass;
 	}
+
+	public function modify() {
+
+		$update = new UpdateStatement;
+		$update->setTable($this->metaObject['tablename']);
+
+		foreach ($this->metaObject['properties'] as $property) {
+
+			if (array_key_exists( 'fieldname', $property ) and 
+				!array_key_exists( 'PK', $property ) and
+				!array_key_exists( 'hasone', $property ) ) {
+
+				$reflectionProperty = $this->reflectionClass->getProperty( $property['property'] );
+				$reflectionProperty->setAccessible(true);
+				
+				$values[ $property['fieldname'] ] = $reflectionProperty->getValue( $this->modelClass );
+			}
+
+			if ( array_key_exists( 'hasone', $property ) ) {
+				$reflectionProperty = $this->reflectionClass->getProperty( $property['property'] );
+				$reflectionProperty->setAccessible(true);
+
+				$object = $reflectionProperty->getValue( $this->modelClass );
+
+				$objectEngine = new Engine( $object );
+
+				$pk = $objectEngine->getMetaObject()['PK'];
+
+				$refClass = $objectEngine->getReflectionClass();
+
+				$reflectionProperty2 = $refClass->getProperty( $pk );
+				$reflectionProperty2->setAccessible(true);
+
+				$values[ $property['fieldname'] ] = $reflectionProperty2->getValue( $object ); 
+			}
+		}
+
+		$pk = $this->metaObject['PK'];
+
+		$reflectionProperty = $this->reflectionClass->getProperty( $pk );
+		$reflectionProperty->setAccessible(true);
+
+		$pkVal = $reflectionProperty->getValue( $this->modelClass );
+
+		$cond = $pk.' = '.$pkVal;
+
+		$sql = $update->getUpdate($values, $cond);
+	}
 }
+

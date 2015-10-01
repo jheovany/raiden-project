@@ -42,6 +42,11 @@ class Invoice {
 		return $this->id;
 	}
 
+	public function getCode(){
+
+		return $this->code;
+	}	
+
 	public function getClient()	{
 
 		return $this->client;
