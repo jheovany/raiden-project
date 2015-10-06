@@ -13,8 +13,6 @@ class Engine {
 
 	private $reflectionClass;
 
-	private $selectStatement;
-
 	private $metaObject;
 
 	private $fetchedObjects = [];
@@ -214,11 +212,6 @@ class Engine {
 		}
 	}
 
-	public function getSelectStatement() {
-
-		return $selectStatement;
-	}
-
 	public function save(){
 
 		return $this->privateSave();
@@ -245,7 +238,13 @@ class Engine {
 				$reflectionProperty = $this->reflectionClass->getProperty( $property['property'] );
 				$reflectionProperty->setAccessible(true);
 				
-				$values[ $property['fieldname'] ] = $reflectionProperty->getValue( $this->modelClass );
+				$value = $reflectionProperty->getValue( $this->modelClass );
+
+				if (is_string($value)) {
+					$value = "'$value'";
+				}
+
+				$values[ $property['fieldname'] ] = $value;
 			}
 
 			if ( array_key_exists( 'hasone', $property ) ) {
@@ -333,7 +332,13 @@ class Engine {
 				$reflectionProperty = $this->reflectionClass->getProperty( $property['property'] );
 				$reflectionProperty->setAccessible(true);
 				
-				$values[ $property['fieldname'] ] = $reflectionProperty->getValue( $this->modelClass );
+				$value = $reflectionProperty->getValue( $this->modelClass );
+
+				if (is_string($value)) {
+					$value = "'$value'";
+				}
+
+				$values[ $property['fieldname'] ] = $value;
 			}
 
 			if ( array_key_exists( 'hasone', $property ) ) {
@@ -365,6 +370,39 @@ class Engine {
 		$cond = $pk.' = '.$pkVal;
 
 		$sql = $update->getUpdate($values, $cond);
+
+		$db = (new Connect)->getConnection();
+		$queryString = $sql;
+
+		$statement = $db->prepare( $queryString );
+		$statement->execute();
+
+		$this->modelClass = $this->findByPK($pkVal);
+	}
+
+	public function destroy() {
+
+		$table = $this->metaObject['tablename'];
+
+		$pk = $this->metaObject['PK'];
+
+		$reflectionProperty = $this->reflectionClass->getProperty( $pk );
+		$reflectionProperty->setAccessible(true);
+
+		$pkVal = $reflectionProperty->getValue( $this->modelClass );
+
+		$sql = "DELETE FROM $table WHERE $pk = $pkVal";
+
+		$this->modelClass = null;
+
+		$db = (new Connect)->getConnection();
+		$queryString = $sql;
+
+		$statement = $db->prepare( $queryString );
+
+		if	( !$statement->execute() ) {
+			var_dump( $statement->errorInfo() );
+		}		
 	}
 }
 

@@ -2,11 +2,10 @@
 
 namespace Raiden\TestModels;
 
-
 /**
  * @table client
  */
-class Client {
+class Client implements \JsonSerializable {
 
 	/**
 	 * @field id
@@ -46,5 +45,22 @@ class Client {
 	public function getLastname() {
 
 		return $this->lastname;
+	}
+
+	public function getDui() {
+
+		return $this->dui;
+	}
+
+	public function getNit() {
+
+		return $this->nit;
+	}
+
+	public function JsonSerialize()
+	{
+		$vars = get_object_vars($this);
+
+		return $vars;
 	}
 }
