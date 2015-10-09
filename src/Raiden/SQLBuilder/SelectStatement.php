@@ -2,7 +2,7 @@
 
 namespace Raiden\SQLBuilder;
 
-class SelectStatement {
+class SelectStatement /*extends SQLStatement*/ {
 
 	private $table;	
 

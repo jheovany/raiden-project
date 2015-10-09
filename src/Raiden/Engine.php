@@ -17,14 +17,14 @@ class Engine {
 
 	private $fetchedObjects = [];
 
-	private $dbConnect;
+	private $connect;
 
 	function __construct ( ) {
 		
 		$a = func_get_args(); 
         $i = func_num_args(); 
         if (method_exists($this,$f='__construct'.$i)) { 
-            call_user_func_array(array($this,$f),$a); 
+            call_user_func_array(array($this,$f),$a);
         } 
 	}
 
@@ -66,7 +66,8 @@ class Engine {
 
 			if (array_key_exists( 'PK', $parameters->getParameters() )) {
 				$this->metaObject['PK'] = $parameters->getParameter('field');
-				$this->metaObject['properties'][$propertyName]['PK'] = $parameters->getParameter('PK');
+				$this->metaObject['property-pk'] = $propertyName;
+				//$this->metaObject['properties'][$propertyName]['PK'] = $parameters->getParameter('PK');
 			}			
 
     		if (array_key_exists( 'hasone', $parameters->getParameters() )) {
@@ -258,11 +259,11 @@ class Engine {
 
 				$objectEngine = new Engine( $object );
 
-				$pk = $objectEngine->getMetaObject()['PK'];
+				$ppk = $objectEngine->getMetaObject()['property-pk'];
 
 				$refClass = $objectEngine->getReflectionClass();
 
-				$reflectionProperty2 = $refClass->getProperty( $pk );
+				$reflectionProperty2 = $refClass->getProperty( $ppk );
 				$reflectionProperty2->setAccessible(true);
 
 				$values[ $property['fieldname'] ] = $reflectionProperty2->getValue( $object ); 
@@ -294,6 +295,8 @@ class Engine {
 				$reflectionProperty->setAccessible(true);
 
 				$objects = $reflectionProperty->getValue( $this->modelClass );
+
+				$value = [];
 
 				$value[$property['FK']] = $lastId;
 
@@ -349,22 +352,23 @@ class Engine {
 
 				$objectEngine = new Engine( $object );
 
-				$pk = $objectEngine->getMetaObject()['PK'];
+				$ppk = $objectEngine->getMetaObject()['property-pk'];
 
 				$refClass = $objectEngine->getReflectionClass();
 
-				$reflectionProperty2 = $refClass->getProperty( $pk );
+				$reflectionProperty2 = $refClass->getProperty( $ppk );
 				$reflectionProperty2->setAccessible(true);
 
 				$values[ $property['fieldname'] ] = $reflectionProperty2->getValue( $object ); 
 			}
 		}
 
-		$pk = $this->metaObject['PK'];
+		$ppk = $this->metaObject['property-pk'];
 
-		$reflectionProperty = $this->reflectionClass->getProperty( $pk );
+		$reflectionProperty = $this->reflectionClass->getProperty( $ppk );
 		$reflectionProperty->setAccessible(true);
 
+		$pk = $this->metaObject['PK'];
 		$pkVal = $reflectionProperty->getValue( $this->modelClass );
 
 		$cond = $pk.' = '.$pkVal;
@@ -375,20 +379,26 @@ class Engine {
 		$queryString = $sql;
 
 		$statement = $db->prepare( $queryString );
-		$statement->execute();
 
-		$this->modelClass = $this->findByPK($pkVal);
+		if	( $statement->execute() ) {
+			$this->modelClass = $this->findByPK($pkVal);
+			return true;
+		} else {
+			var_dump( $statement->errorInfo() );
+			return false;
+		}
 	}
 
 	public function destroy() {
 
 		$table = $this->metaObject['tablename'];
 
-		$pk = $this->metaObject['PK'];
+		$ppk = $this->metaObject['property-pk'];
 
-		$reflectionProperty = $this->reflectionClass->getProperty( $pk );
+		$reflectionProperty = $this->reflectionClass->getProperty( $ppk );
 		$reflectionProperty->setAccessible(true);
 
+		$pk = $this->metaObject['PK'];
 		$pkVal = $reflectionProperty->getValue( $this->modelClass );
 
 		$sql = "DELETE FROM $table WHERE $pk = $pkVal";
@@ -400,9 +410,12 @@ class Engine {
 
 		$statement = $db->prepare( $queryString );
 
-		if	( !$statement->execute() ) {
+		if	( $statement->execute() ) {
+			return true;
+		} else {
 			var_dump( $statement->errorInfo() );
-		}		
+			return false;
+		}
 	}
 }
 

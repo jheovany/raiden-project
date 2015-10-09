@@ -37,6 +37,13 @@ class Client implements \JsonSerializable {
 	 */
 	private $nit;
 
+	/**
+	 * hasmany Raiden\TestModels\Invoice
+	 * FK id_client
+	 */
+	private $invoices = [];
+
+
 	public function getFirstname() {
 
 		return $this->firstname;

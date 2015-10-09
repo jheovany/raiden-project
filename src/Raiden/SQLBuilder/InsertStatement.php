@@ -28,11 +28,6 @@ class InsertStatement  {
 		$this->sqlStatements['insert']['table'] = $this->table;
 	}
 
-	public function addColumn ( $column ) {
-
-		$this->columns[] = $column;
-	}
-
 	public function getInsert($data) {
 		
 		$columns = null;
