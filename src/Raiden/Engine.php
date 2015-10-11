@@ -19,6 +19,8 @@ class Engine {
 
 	private $connect;
 
+	private $isJson = false;
+
 	function __construct ( ) {
 		
 		$a = func_get_args(); 
@@ -34,6 +36,8 @@ class Engine {
 	}
 
 	public function initialize ( $modelClass ) {
+
+		$this->connect = (new DBConnector)->connector();
 
 		$this->modelClass = $modelClass;
 
@@ -138,7 +142,7 @@ class Engine {
 			$select->setCondition("WHERE $pkey = " . $cond);
 		}
 
-		$db = (new Connect)->getConnection();
+		$db = $this->connect;
 		$queryString = $select->getSelect();
 		//var_dump( $queryString );
 
@@ -275,7 +279,7 @@ class Engine {
 
 		$sql = $insert->getInsert($values);
 
-		$db = (new Connect)->getConnection();
+		$db = $this->connect;
 		$queryString = $sql;
 		var_dump( $queryString );
 
@@ -375,7 +379,7 @@ class Engine {
 
 		$sql = $update->getUpdate($values, $cond);
 
-		$db = (new Connect)->getConnection();
+		$db = $this->connect;
 		$queryString = $sql;
 
 		$statement = $db->prepare( $queryString );
@@ -405,7 +409,7 @@ class Engine {
 
 		$this->modelClass = null;
 
-		$db = (new Connect)->getConnection();
+		$db = $this->connect;
 		$queryString = $sql;
 
 		$statement = $db->prepare( $queryString );
@@ -416,6 +420,11 @@ class Engine {
 			var_dump( $statement->errorInfo() );
 			return false;
 		}
+	}
+
+	public function toJson ( $convert = true ) {
+
+
 	}
 }
 

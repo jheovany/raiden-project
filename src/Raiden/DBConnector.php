@@ -8,18 +8,24 @@ class DBConnector {
 
 	private $config;
 
+	public function __construct ( ) {
+
+		$this->initialize();
+	}
+
 	public function initialize() {
 
-		$this->Config();
+		$this->config = include 'raiden.config.php';
 
 		$connector = $this->config['default-connector'];
 		$host = $this->config['connectors'][$connector]['host'];
+		$port = $this->config['connectors'][$connector]['port'];
 		$database = $this->config['connectors'][$connector]['database'];
 		$user = $this->config['connectors'][$connector]['username'];
 		$pass = $this->config['connectors'][$connector]['password'];
 
-		$dsn = "$connector:host=$host;dbname=$database";
-		var_dump($dsn);
+		$dsn = "$connector:host=$host;port=$port;dbname=$database";
+		//var_dump($dsn);
 
 		
 		try {
@@ -28,12 +34,11 @@ class DBConnector {
 			var_dump($e->getMessage());
 			die();	
 		}
+
 	}
 
-	public function Config() {
+	public function connector ( ) {
 
-		$this->config = include 'raiden.config.php';
-
-		var_dump($this->config);
+		return $this->PDOConnector;
 	}
 }
