@@ -14,7 +14,8 @@ class InvoiceDetails {
 	private $id;
 
 	/**
-	 * @linked Raiden\TestModels\Invoice
+	 * @field id_invoice
+	 * @belongsto Raiden\TestModels\Invoice
 	 */
 	private $invoice;
 

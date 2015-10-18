@@ -17,9 +17,13 @@ class Engine {
 
 	private $fetchedObjects = [];
 
+	private $fetchedRows = [];
+
 	private $connect;
 
 	private $isJson = false;
+
+	private $filter;
 
 	function __construct ( ) {
 		
@@ -35,7 +39,7 @@ class Engine {
 		$this->initialize ( $modelClass );
 	}
 
-	public function initialize ( $modelClass ) {
+	public function initialize ( $modelClass, $parentEngine = null) {
 
 		$this->connect = (new DBConnector)->connector();
 
@@ -68,32 +72,37 @@ class Engine {
 				$this->metaObject['properties'][$propertyName]['fieldname'] = $parameters->getParameter('field');
 			}
 
+			if (array_key_exists( 'belongsto', $parameters->getParameters() )) {
+				$this->metaObject['properties'][$propertyName]['belongsto'] = $parameters->getParameter('belongsto');
+			}
+
 			if (array_key_exists( 'PK', $parameters->getParameters() )) {
 				$this->metaObject['PK'] = $parameters->getParameter('field');
 				$this->metaObject['property-pk'] = $propertyName;
-				//$this->metaObject['properties'][$propertyName]['PK'] = $parameters->getParameter('PK');
+				$this->metaObject['properties'][$propertyName]['PK'] = $parameters->getParameter('PK');
 			}			
 
     		if (array_key_exists( 'hasone', $parameters->getParameters() )) {
 				$this->metaObject['properties'][$propertyName]['hasone'] = $parameters->getParameter('hasone');
+				
+				$engine = new Engine();
+				$engine->initialize( new $this->metaObject['properties'][$propertyName]['hasone'] , $this);		
     			
-    			$engine = new Engine();
-    			$engine->initialize( new $this->metaObject['properties'][$propertyName]['hasone']);
     			$this->metaObject['properties'][$propertyName]['metaobject'] = $engine->getMetaObject();
     			$this->metaObject['properties'][$propertyName]['engine'] = $engine;
     		}
-
+    		
     		if (array_key_exists( 'hasmany', $parameters->getParameters() )) {
 				$this->metaObject['properties'][$propertyName]['hasmany'] = $parameters->getParameter('hasmany');
 				$this->metaObject['properties'][$propertyName]['FK'] = $parameters->getParameter('FK');    			
-			
+
 				$engine = new Engine();
-    			$engine->initialize( new $this->metaObject['properties'][$propertyName]['hasmany']);
+    			$engine->initialize( new $this->metaObject['properties'][$propertyName]['hasmany'] , $this);
+
     			$this->metaObject['properties'][$propertyName]['metaobject'] = $engine->getMetaObject();
     			$this->metaObject['properties'][$propertyName]['engine'] = $engine;
 			}
 		}
-
 		//var_dump($this->metaObject);
 	} 
 
@@ -101,14 +110,31 @@ class Engine {
 
 	public function getReflectionClass () { return $this->reflectionClass; }
 
+	public function getFilter ( ) {
+
+		$this->filter = new Filter;
+		$this->filter->initialize($this);
+
+		return $this->filter;
+	}
+
 	public function findByPK( $id ) {
 
 		return $this->find($id);
 	}	
 
-	public function findWhere($cond) {
+	public function findByFK($cond) {
 		
 		return $this->find($cond, true);
+	}
+
+	public function findWhere() {
+		
+		if ($this->filter) {
+			return $this->find($this->filter->getSqlFilter(), true);
+		} else {
+			return $this->findAll();
+		}
 	}
 
 	public function findAll($limit = 100) {
@@ -151,6 +177,8 @@ class Engine {
 
 		$rows = $statement->fetchAll(); 
 
+		$this->fetchedRows = $rows;
+
 		//echo 'class: ' . $this->metaObject['classname'] . '<br>';
 		//echo 'table: ' . $this->metaObject['tablename'];
 		//var_dump($rows);
@@ -185,7 +213,7 @@ class Engine {
 					$reflectionProperty->setAccessible(true);
 					$reflectionProperty->setValue( $object, $hasOneObject);
 				}
-
+				
 				if (array_key_exists( 'hasmany', $property )) {
 
 					$pk = $this->metaObject['PK'];
@@ -195,7 +223,7 @@ class Engine {
 
 					$engine = $property['engine'];
 
- 					$hasManyObjects	= $engine->findWhere("$fk = $value");
+ 					$hasManyObjects	= $engine->findByFK("$fk = $value");
 
  					$reflectionProperty = $this->reflectionClass->getProperty( $property['property'] );
 					$reflectionProperty->setAccessible(true);
@@ -230,6 +258,9 @@ class Engine {
 			$values[key($addVals)] = $addVals[key($addVals)];	
 		}
 
+		//echo 'valores adicionales :';
+		//var_dump($values);
+
 		$insert = new InsertStatement;
 
 		$insert->setTable($this->metaObject['tablename']);
@@ -238,7 +269,8 @@ class Engine {
 
 			if (array_key_exists( 'fieldname', $property ) and 
 				!array_key_exists( 'PK', $property ) and
-				!array_key_exists( 'hasone', $property ) ) {
+				!array_key_exists( 'hasone', $property ) and
+				!array_key_exists( 'belongsto', $property ) ) {
 
 				$reflectionProperty = $this->reflectionClass->getProperty( $property['property'] );
 				$reflectionProperty->setAccessible(true);
@@ -272,26 +304,29 @@ class Engine {
 
 				$values[ $property['fieldname'] ] = $reflectionProperty2->getValue( $object ); 
 			}
+
+			echo 'valores adicionales: ';
+			var_dump($values);
 		}
-	
-		//echo 'valores: ';
-		//var_dump($values);
 
 		$sql = $insert->getInsert($values);
 
 		$db = $this->connect;
 		$queryString = $sql;
-		var_dump( $queryString );
+		//var_dump( $queryString );
 
 		$statement = $db->prepare( $queryString );
-		$statement->execute();
+		//$statement->execute();
+
+		if	( !$statement->execute() ) {
+			var_dump( $statement->errorInfo() );
+			return;
+		}
 
 		$lastId = $db->lastInsertId(); 
 
 		echo 'last id: ';
 		var_dump($lastId);
-
-
 
 		foreach ($this->metaObject['properties'] as $property) {
 			if ( array_key_exists ( 'hasmany', $property ) ) {
@@ -304,8 +339,7 @@ class Engine {
 
 				$value[$property['FK']] = $lastId;
 
-				echo 'valores adicionales :';
-				var_dump($value);
+				
 
 				foreach ($objects as $obj) {
 					$engine = new Engine($obj);
@@ -425,6 +459,40 @@ class Engine {
 	public function toJson ( $convert = true ) {
 
 
+	}
+
+	public function fetch( $property ) {
+
+		if (array_key_exists($property, $this->metaObject['properties']) and 
+			array_key_exists('hasmany',$this->metaObject['properties'][$property])) {
+
+			$cont = 0;
+
+			foreach ($this->fetchedObjects as $key => $object) {
+				
+				$reflectionProperty = $this->reflectionClass->getProperty( $this->metaObject['property-pk'] );
+				$reflectionProperty->setAccessible(true);
+				$fkval = $reflectionProperty->getValue( $object );
+
+				$fk = $this->metaObject['properties'][$property]['FK'];
+
+				$engine = $this->metaObject['properties'][$property]['engine'];
+				
+				$hasManyObjects	= $engine->findByFK("$fk = $fkval");
+
+				//var_dump($hasManyObjects);
+
+				$reflectionProperty2 = $this->reflectionClass->getProperty( $property );
+				$reflectionProperty2->setAccessible(true);
+				$reflectionProperty2->setValue( $object, $hasManyObjects);
+			}
+		}
+
+		else {
+			
+			throw new \Exception(
+				"La propiedad '$property' no representa a una coleccion de objetos objeto");
+		}
 	}
 }
 

@@ -7,16 +7,14 @@ namespace Raiden\TestModels;
  */
 class Concept {
 
-	/** 
+	/**
+	 * @PK 
 	 * @field id
-	 * @PK
 	 */
 	private $id;
 
 	/**
 	 * @field description
-	 *
-	 *
 	 */
 	private $description;
 

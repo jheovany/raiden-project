@@ -7,8 +7,9 @@
 */
 class JsonEncoder {
 	
-	function __construct(argument) {
-		# code...
+	function __construct ( ) {
+		
+
 	}
 
 	public function initialize (  ) {
