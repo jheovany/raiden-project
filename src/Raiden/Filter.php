@@ -96,6 +96,11 @@ class Filter {
 
 				$this->isIn = false;
 			}
+		} 
+
+		else {
+
+			throw new \Exception( "La propiedad $prop no existe" );
 		}
 
 		return $this;
