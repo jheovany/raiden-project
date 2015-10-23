@@ -8,10 +8,9 @@
             "email": "jheovany.menjivarg@gmail.com"
         }
     ],
-    "minimum-stability": "dev",
     "require": { 
         "php": ">=5.3.0",
-        "jan-swiecki/simple-annotations": "dev-master"
+        "jan-swiecki/simple-annotations": "^0.3.1"
     },
     "autoload": {
         "psr-0": {
