@@ -120,18 +120,18 @@ class Engine {
 
 	public function findByPK( $id ) {
 
-		return $this->find($id);
+		return $this->findWhere($id);
 	}	
 
 	public function findByFK($cond) {
 		
-		return $this->find($cond, true);
+		return $this->findWhere($cond, true);
 	}
 
-	public function findWhere() {
+	public function find() {
 		
 		if ($this->filter) {
-			return $this->find($this->filter->getSqlFilter(), true);
+			return $this->findWhere($this->filter->getSqlFilter(), true);
 		} else {
 			return $this->findAll();
 		}
@@ -139,10 +139,10 @@ class Engine {
 
 	public function findAll($limit = 100) {
 
-		return $this->find($limit, false, true);
+		return $this->findWhere($limit, false, true);
 	}	
 
-	public function find( $cond, $isWhere = false, $isLimit = false ) {
+	public function findWhere( $cond, $isWhere = false, $isLimit = false ) {
 
 		$this->fetchedObjects = null;
 
@@ -323,7 +323,23 @@ class Engine {
 			return;
 		}
 
-		$lastId = $db->lastInsertId(); 
+		$driverName = $db->getAttribute(\PDO::ATTR_DRIVER_NAME);
+
+		if ( $driverName == 'pgsql' ) {
+
+			$table = $this->metaObject['tablename'];
+			$pk = $this->metaObject['PK'];
+
+			$seq = $table."_".$pk."_seq";
+
+			$lastId = $db->lastInsertId( $seq );
+
+		} 
+
+		else {
+
+			$lastId = $db->lastInsertId(); 	
+		}
 
 		echo 'last id: ';
 		var_dump($lastId);
