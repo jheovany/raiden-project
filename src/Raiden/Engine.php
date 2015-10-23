@@ -323,7 +323,23 @@ class Engine {
 			return;
 		}
 
-		$lastId = $db->lastInsertId(); 
+		$driverName = $db->getAttribute(\PDO::ATTR_DRIVER_NAME);
+
+		if ( $driverName == 'pgsql' ) {
+
+			$table = $this->metaObject['tablename'];
+			$pk = $this->metaObject['PK'];
+
+			$seq = $table."_".$pk."_seq";
+
+			$lastId = $db->lastInsertId( $seq );
+
+		} 
+
+		else {
+
+			$lastId = $db->lastInsertId(); 	
+		}
 
 		echo 'last id: ';
 		var_dump($lastId);
