@@ -6,8 +6,8 @@ return [
 	 * Base de datos por defecto, cambiar por la base de datos que
 	 * se requiera usar ej: mysql, pgsql, oracle.
 	 */
-	//'default-connector' => 'mysql',
-	'default-connector' => 'pgsql',
+	'default-connector' => 'mysql',
+	//'default-connector' => 'pgsql',
 	//'default-connector' => 'oracle',
 	
 	'connectors' => [
