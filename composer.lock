@@ -4,11 +4,12 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#composer-lock-the-lock-file",
         "This file is @generated automatically"
     ],
-    "hash": "4534f5732d06efe4215cf4a4b4171783",
+    "hash": "c2db0afc30e1bacbbebbedaf1cda4884",
+    "content-hash": "8d279928ce8c32b1c4d7bbbd2753ca6d",
     "packages": [
         {
             "name": "jan-swiecki/simple-annotations",
-            "version": "dev-master",
+            "version": "0.3.1",
             "source": {
                 "type": "git",
                 "url": "https://github.com/jan-swiecki/php-simple-annotations.git",
@@ -53,10 +54,8 @@
     ],
     "packages-dev": [],
     "aliases": [],
-    "minimum-stability": "dev",
-    "stability-flags": {
-        "jan-swiecki/simple-annotations": 20
-    },
+    "minimum-stability": "stable",
+    "stability-flags": [],
     "prefer-stable": false,
     "prefer-lowest": false,
     "platform": {

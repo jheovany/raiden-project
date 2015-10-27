@@ -5,7 +5,7 @@ namespace Raiden\TestModels;
 /**
  * @table invoice
  */
-class Invoice implements \JsonSerializable {
+class Invoice {
 
 	/** 
 	 * @PK @field id @ociseq invoice_seq
@@ -73,11 +73,4 @@ class Invoice implements \JsonSerializable {
 	public function addDetail($det) {
 		$this->details[] = $det;
 	}
-
-	public function JsonSerialize()
-    {
-        $vars = get_object_vars($this);
-
-        return $vars;
-    }
 }

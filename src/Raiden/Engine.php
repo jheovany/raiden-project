@@ -148,6 +148,9 @@ class Engine {
 
 	public function findWhere( $cond, $isWhere = false, $isLimit = false ) {
 
+		$db = $this->connect;
+		$driverName = $db->getAttribute(\PDO::ATTR_DRIVER_NAME);
+
 		$this->fetchedObjects = null;
 
 		$select = new SelectStatement;
@@ -166,25 +169,41 @@ class Engine {
 		if ($isWhere) {
 			$select->setCondition("WHERE " . $cond);
 		} else if ($isLimit) {
-			$select->setCondition("LIMIT " . $cond);
+
+			if ( $driverName == 'oci' ) {
+
+				$select->setCondition("WHERE ROWNUM <= " . $cond);				
+			}
+
+			else {
+
+				$select->setCondition("LIMIT " . $cond);
+
+			}
+
 		} else {
 			$pkey = $this->metaObject['PK'];
 			$select->setCondition("WHERE $pkey = " . $cond);
 		}
 
-		$db = $this->connect;
+		
 		$queryString = $select->getSelect();
+		
+		//echo 'SQL command: ';
 		//var_dump( $queryString );
 
 		$statement = $db->prepare( $queryString );
-		$statement->execute();
+		//$statement->execute();
+
+		if	( !$statement->execute() ) {
+			var_dump( $statement->errorInfo() );
+			return;
+		}
 
 		$rows = $statement->fetchAll(); 
 
 		$this->fetchedRows = $rows;
 
-		//echo 'class: ' . $this->metaObject['classname'] . '<br>';
-		//echo 'table: ' . $this->metaObject['tablename'];
 		//var_dump($rows);
 
 		foreach ($rows as $row) {
@@ -197,11 +216,20 @@ class Engine {
 
 				if (array_key_exists( 'fieldname', $property ) and !array_key_exists( 'hasone', $property )) {	
 
-					//var_dump($property['property']);
+					//var_dump($object);
+					//return;
 
 					$reflectionProperty = $this->reflectionClass->getProperty( $property['property'] );
 					$reflectionProperty->setAccessible(true);
-					$reflectionProperty->setValue( $object, $row[$property['fieldname']]);
+
+					if ( $driverName == 'oci' ) {
+
+						$field = $row[strtoupper($property['fieldname'])];
+					} else {
+						$field = $row[$property['fieldname']];
+					}
+
+					$reflectionProperty->setValue( $object, $field);
 					$fk = $reflectionProperty->getValue( $object );
 				}
 
@@ -273,14 +301,12 @@ class Engine {
 
 		if ( $driverName == 'oci' ) {
 
-				$seq = $this->metaObject['properties'][$this->metaObject['property-pk']]['ociseq'];
-				$seq += ".nextval";
-				$values[ $this->metaObject['PK'] ] = $seq;
-			}
+			$seq = $this->metaObject['properties'][$this->metaObject['property-pk']]['ociseq'];
+			$seq += ".nextval";
+			$values[ $this->metaObject['PK'] ] = $seq;
+		}
 
 		foreach ($this->metaObject['properties'] as $property) {
-
-			
 
 			if (array_key_exists( 'fieldname', $property ) and 
 				!array_key_exists( 'PK', $property ) and
@@ -513,7 +539,7 @@ class Engine {
 	public function fetch( $property ) {
 
 		if (array_key_exists($property, $this->metaObject['properties']) and 
-			array_key_exists('hasmany',$this->metaObject['properties'][$property])) {
+			array_key_exists('belongsto',$this->metaObject['properties'][$property])) {
 
 			$cont = 0;
 
