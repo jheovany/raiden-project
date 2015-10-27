@@ -80,6 +80,10 @@ class Engine {
 				$this->metaObject['PK'] = $parameters->getParameter('field');
 				$this->metaObject['property-pk'] = $propertyName;
 				$this->metaObject['properties'][$propertyName]['PK'] = $parameters->getParameter('PK');
+			}
+
+			if (array_key_exists( 'ociseq', $parameters->getParameters() )) {
+				$this->metaObject['properties'][$propertyName]['ociseq'] = $parameters->getParameter('ociseq');
 			}			
 
     		if (array_key_exists( 'hasone', $parameters->getParameters() )) {
@@ -265,7 +269,18 @@ class Engine {
 
 		$insert->setTable($this->metaObject['tablename']);
 
+		$driverName = $db->getAttribute(\PDO::ATTR_DRIVER_NAME);
+
+		if ( $driverName == 'oci' ) {
+
+				$seq = $this->metaObject['properties'][$this->metaObject['property-pk']]['ociseq'];
+				$seq += ".nextval";
+				$values[ $this->metaObject['PK'] ] = $seq;
+			}
+
 		foreach ($this->metaObject['properties'] as $property) {
+
+			
 
 			if (array_key_exists( 'fieldname', $property ) and 
 				!array_key_exists( 'PK', $property ) and
@@ -323,8 +338,6 @@ class Engine {
 			return;
 		}
 
-		$driverName = $db->getAttribute(\PDO::ATTR_DRIVER_NAME);
-
 		if ( $driverName == 'pgsql' ) {
 
 			$table = $this->metaObject['tablename'];
@@ -336,6 +349,26 @@ class Engine {
 
 		} 
 
+		if ( $driverName == 'oci' ) {
+
+			$seq = $this->metaObject['properties'][$this->metaObject['property-pk']]['ociseq'];
+			
+			$querySeq = "select $seq.currval from dual";
+
+			$statement = $db->prepare( $querySeq );
+
+			if	( !$statement->execute() ) {
+				var_dump( $statement->errorInfo() );
+				return;
+			}
+
+			$seqVal = $statement->fetch();
+			
+			$lastId = $seqVal['LAST_ID']; 
+
+			//var_dump($seqVal);
+		}
+ 
 		else {
 
 			$lastId = $db->lastInsertId(); 	

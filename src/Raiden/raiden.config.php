@@ -6,9 +6,9 @@ return [
 	 * Base de datos por defecto, cambiar por la base de datos que
 	 * se requiera usar ej: mysql, pgsql, oracle.
 	 */
-	'default-connector' => 'mysql',
+	//'default-connector' => 'mysql',
 	//'default-connector' => 'pgsql',
-	//'default-connector' => 'oracle',
+	'default-connector' => 'oci',
 	
 	'connectors' => [
 
@@ -28,11 +28,12 @@ return [
 			'password' => 'admin',
 		],
 
-		'oracle' => [
-			'host'     => 'localhost',
-			'database' => '',
-			'username' => '',
-			'password' => '',
+		'oci' => [
+			//'host'     => 'localhost',
+			//'port'     => '1521',
+			'database' => 'localhost/xe:1521',
+			'username' => 'test',
+			'password' => 'admin',
 		]
 	]	
 ];

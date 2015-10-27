@@ -24,8 +24,14 @@ class DBConnector {
 		$user = $this->config['connectors'][$connector]['username'];
 		$pass = $this->config['connectors'][$connector]['password'];
 
-		$dsn = "$connector:host=$host;port=$port;dbname=$database";
-		//var_dump($dsn);
+		if ($connector == "oci") {
+
+			$dsn = "$connector:dbname=$database";	
+
+		} else {
+
+			$dsn = "$connector:host=$host;port=$port;dbname=$database";
+		}//var_dump($dsn);
 
 		
 		try {
