@@ -72,6 +72,10 @@ class Engine {
 				$this->metaObject['properties'][$propertyName]['fieldname'] = $parameters->getParameter('field');
 			}
 
+			if (array_key_exists( 'auto', $parameters->getParameters() )) {
+				$this->metaObject['properties'][$propertyName]['auto'] = $parameters->getParameter('auto');
+			}
+
 			if (array_key_exists( 'belongsto', $parameters->getParameters() )) {
 				$this->metaObject['properties'][$propertyName]['belongsto'] = $parameters->getParameter('belongsto');
 			}
@@ -214,7 +218,9 @@ class Engine {
 
 			foreach ($this->metaObject['properties'] as $property) {
 
-				if (array_key_exists( 'fieldname', $property ) and !array_key_exists( 'hasone', $property )) {	
+				if (array_key_exists( 'fieldname', $property ) and 
+					!array_key_exists( 'hasone', $property ) and
+					!array_key_exists( 'belongsto', $property )) {	
 
 					//var_dump($object);
 					//return;
@@ -225,7 +231,9 @@ class Engine {
 					if ( $driverName == 'oci' ) {
 
 						$field = $row[strtoupper($property['fieldname'])];
+
 					} else {
+
 						$field = $row[$property['fieldname']];
 					}
 
@@ -235,7 +243,14 @@ class Engine {
 
 				if (array_key_exists( 'hasone', $property )) {	
 
-					$fk = $row[$property['fieldname']];
+					if ( $driverName == 'oci' ) {
+
+						$fk = $row[strtoupper($property['fieldname'])];
+
+					} else {
+
+						$fk = $row[$property['fieldname']];
+					}
 
 					$engine = $property['engine'];
 
@@ -251,9 +266,20 @@ class Engine {
 					$pk = $this->metaObject['PK'];
 					$fk = $property['FK'];
 
-					$value = $row[$pk];
+					if ($driverName == 'oci') {
+
+						$value = $row[strtoupper($pk)];	
+					}
+
+					else {
+
+						$value = $row[$pk];	
+					}
 
 					$engine = $property['engine'];
+
+					echo 'Foranea: ';
+					var_dump($fk);
 
  					$hasManyObjects	= $engine->findByFK("$fk = $value");
 
@@ -284,6 +310,8 @@ class Engine {
 
 	private function privateSave( $addVals = null ) {
 
+		$db = $this->connect;
+
 		$values = [];
 
 		if (!is_null($addVals)) {
@@ -297,19 +325,32 @@ class Engine {
 
 		$insert->setTable($this->metaObject['tablename']);
 
-		$driverName = $db->getAttribute(\PDO::ATTR_DRIVER_NAME);
+		/*$driverName = $db->getAttribute(\PDO::ATTR_DRIVER_NAME);
 
 		if ( $driverName == 'oci' ) {
 
 			$seq = $this->metaObject['properties'][$this->metaObject['property-pk']]['ociseq'];
 			$seq += ".nextval";
 			$values[ $this->metaObject['PK'] ] = $seq;
-		}
+		}*/
 
 		foreach ($this->metaObject['properties'] as $property) {
 
+			if ( array_key_exists( 'ociseq', $property ) ) {
+
+				$seq = $property['ociseq'];
+
+				$seq = "$seq.nextval";
+				
+				$values[ $this->metaObject['PK'] ] = $seq;
+
+				echo 'seq: ';
+				var_dump($seq);
+			}
+
 			if (array_key_exists( 'fieldname', $property ) and 
-				!array_key_exists( 'PK', $property ) and
+				!array_key_exists( 'auto', $property ) and
+				!array_key_exists( 'ociseq', $property ) and
 				!array_key_exists( 'hasone', $property ) and
 				!array_key_exists( 'belongsto', $property ) ) {
 
@@ -318,11 +359,16 @@ class Engine {
 				
 				$value = $reflectionProperty->getValue( $this->modelClass );
 
+				if (array_key_exists( 'PK', $property)) {
+					$lastId = $value;
+				}
+
 				if (is_string($value)) {
 					$value = "'$value'";
 				}
 
 				$values[ $property['fieldname'] ] = $value;
+				
 			}
 
 			if ( array_key_exists( 'hasone', $property ) ) {
@@ -364,22 +410,51 @@ class Engine {
 			return;
 		}
 
-		if ( $driverName == 'pgsql' ) {
 
-			$table = $this->metaObject['tablename'];
-			$pk = $this->metaObject['PK'];
 
-			$seq = $table."_".$pk."_seq";
+		if ( array_key_exists('auto', $this->metaObject['properties'][$this->metaObject['property-pk']] ) ) {
 
-			$lastId = $db->lastInsertId( $seq );
+			if ( $driverName == 'mysql' ) { 
+				
+				$lastId = $db->lastInsertId( );
+			}
 
-		} 
+			if ( $driverName == 'pgsql' ) {
 
-		if ( $driverName == 'oci' ) {
+				$table = $this->metaObject['tablename'];
+				$pk = $this->metaObject['PK'];
+
+				$seq = $table."_".$pk."_seq";
+
+				$lastId = $db->lastInsertId( $seq );
+			}
+
+			if ( $driverName == 'oci' ) { 
+				
+				$table = $this->metaObject['tablename'];
+				$pk = $this->metaObject['PK'];
+
+				$queryString = "SELECT MAX($pk) AS id FROM $table";
+
+				$statement = $db->prepare( $queryString );
+				//$statement->execute();
+
+				if	( !$statement->execute() ) {
+					var_dump( $statement->errorInfo() );
+					return;
+				}
+
+				$id = $statement->fetch();
+
+				$lastId = $id['ID'];
+			}
+		}
+
+		if ( array_key_exists('ociseq', $this->metaObject['properties'][$this->metaObject['property-pk']] ) ) {
 
 			$seq = $this->metaObject['properties'][$this->metaObject['property-pk']]['ociseq'];
 			
-			$querySeq = "select $seq.currval from dual";
+			$querySeq = "select $seq.currval as last_id from dual";
 
 			$statement = $db->prepare( $querySeq );
 
@@ -390,14 +465,7 @@ class Engine {
 
 			$seqVal = $statement->fetch();
 			
-			$lastId = $seqVal['LAST_ID']; 
-
-			//var_dump($seqVal);
-		}
- 
-		else {
-
-			$lastId = $db->lastInsertId(); 	
+			$lastId = $seqVal['LAST_ID'];
 		}
 
 		echo 'last id: ';
@@ -541,8 +609,6 @@ class Engine {
 		if (array_key_exists($property, $this->metaObject['properties']) and 
 			array_key_exists('belongsto',$this->metaObject['properties'][$property])) {
 
-			$cont = 0;
-
 			foreach ($this->fetchedObjects as $key => $object) {
 				
 				$reflectionProperty = $this->reflectionClass->getProperty( $this->metaObject['property-pk'] );
@@ -566,7 +632,7 @@ class Engine {
 		else {
 			
 			throw new \Exception(
-				"La propiedad '$property' no representa a una coleccion de objetos objeto");
+				"La propiedad '$property' no representa a una coleccion de objetos");
 		}
 	}
 }
