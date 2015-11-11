@@ -6,16 +6,16 @@ return [
 	 * Base de datos por defecto, cambiar por la base de datos que
 	 * se requiera usar ej: mysql, pgsql, oracle.
 	 */
-	//'default-connector' => 'mysql',
+	'default-connector' => 'mysql',
 	//'default-connector' => 'pgsql',
-	'default-connector' => 'oci',
+	//'default-connector' => 'oci',
 	
 	'connectors' => [
 
 		'mysql' => [
 			'host'     => 'localhost',
 			'port'     => '3306',
-			'database' => 'test',
+			'database' => 'tutorial',
 			'username' => 'root',
 			'password' => '',
 		],
