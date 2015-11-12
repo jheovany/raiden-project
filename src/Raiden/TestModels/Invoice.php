@@ -20,12 +20,12 @@ class Invoice {
 
 	/**
 	 * @field id_client
-	 * @hasone Raiden\TestModels\Client
+	 * @belongsTo Raiden\TestModels\Client
 	 */
 	private $client;
 
 	/**
-	 * @hasmany Raiden\TestModels\InvoiceDetails
+	 * @hasMany Raiden\TestModels\InvoiceDetails
 	 * @FK id_invoice
 	 */
 	private $details = [];

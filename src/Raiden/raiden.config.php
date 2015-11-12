@@ -15,7 +15,7 @@ return [
 		'mysql' => [
 			'host'     => 'localhost',
 			'port'     => '3306',
-			'database' => 'tutorial',
+			'database' => 'test',	
 			'username' => 'root',
 			'password' => '',
 		],

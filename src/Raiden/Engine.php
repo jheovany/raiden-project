@@ -47,8 +47,8 @@ class Engine {
 
 		$this->isMaster = $master;
 
-		echo 'master: ';
-		var_dump($this->isMaster);
+		/*echo 'master: ';
+		var_dump($this->isMaster);*/
 
 		$this->connect = (new DBConnector)->connector();
 
@@ -110,18 +110,18 @@ class Engine {
 				
 				$this->metaObject['properties'][$propertyName]['belongsTo'] = $parameters->getParameter('belongsTo');
 
-				$className = $this->metaObject['properties'][$propertyName]['belongsTo'];
+				$c = $this->metaObject['properties'][$propertyName]['belongsTo'];
 				
-				if (array_key_exists($className, $this->parentEngines)) {
+				if (array_key_exists($c, $this->parentEngines)) {
 
-					$engine = $this->parentEngines[$className];
+					$engine = $this->parentEngines[$c];
 				}
 
 				else {
 
 					$engine = new Engine();
 					$engine->addParentEngine( $this->metaObject['className'], $this);
-					$engine->initialize( new $className, false);			
+					$engine->initialize( new $c, false);		
 				}
 
     			$this->metaObject['properties'][$propertyName]['metaObject'] = $engine->getMetaObject();
@@ -240,8 +240,8 @@ class Engine {
 		
 		$queryString = $select->getSelect();
 		
-		echo 'SQL command: ';
-		var_dump( $queryString );
+		/*echo 'SQL command: ';
+		var_dump( $queryString );*/
 
 		$statement = $db->prepare( $queryString );
 		//$statement->execute();
@@ -303,6 +303,12 @@ class Engine {
 						}
 
 						$engine = $property['engine'];
+						/*
+						echo 'Engine';
+						var_dump($engine);
+
+						return;*/
+
 						$hasOneObject = $engine->findByPK( $fk );
 
 	 					$reflectionProperty = $this->reflectionClass->getProperty( $property['property'] );

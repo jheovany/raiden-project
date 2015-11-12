@@ -21,7 +21,7 @@ class InvoiceDetails {
 
 	/**
 	 * @field id_concept
-	 * @hasone Raiden\TestModels\Concept
+	 * @belongsTo Raiden\TestModels\Concept
 	 */
 	private $concept;
 

@@ -5,7 +5,7 @@ namespace Raiden\TestModels;
 /**
  * @table client
  */
-class Client implements \JsonSerializable {
+class Client {
 
 	/**
 	 * @PK @field id
@@ -34,7 +34,7 @@ class Client implements \JsonSerializable {
 	private $nit;
 
 	/**
-	 * @FK id_client @belongstomany Raiden\TestModels\Invoice
+	 * @FK id_client @hasMany Raiden\TestModels\Invoice
 	 */
 	private $invoices = [];
 
@@ -57,12 +57,5 @@ class Client implements \JsonSerializable {
 	public function getNit() {
 
 		return $this->nit;
-	}
-
-	public function JsonSerialize()
-	{
-		$vars = get_object_vars($this);
-
-		return $vars;
 	}
 }
