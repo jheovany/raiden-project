@@ -34,16 +34,16 @@ class Filter {
 		if ( array_key_exists ( $prop,  $this->metaObject['properties'] ) ) {
 
 			
-			if ( array_key_exists ( 'hasone',  $this->metaObject['properties'][$prop] ) ) {
+			if ( array_key_exists ( 'belongsTo',  $this->metaObject['properties'][$prop] ) ) {
 				// Subtabla
 			
-				$fk = $this->metaObject['properties'][$prop]['fieldname'];
+				$fk = $this->metaObject['properties'][$prop]['fieldName'];
 
 				$engine = $this->metaObject['properties'][$prop]['engine'];
 
 				$pk = $engine->getMetaObject()['PK'];
 
-				$table = $engine->getMetaObject()['tablename'];
+				$table = $engine->getMetaObject()['tableName'];	
 
 				$subp = implode(".",$props);
 
@@ -61,7 +61,7 @@ class Filter {
 
 			}
 
-			else if ( array_key_exists ( 'hasmany',  $this->metaObject['properties'][$prop] ) ) {
+			else if ( array_key_exists ( 'hasMany',  $this->metaObject['properties'][$prop] ) ) {
 				// Subtabla
 
 				$pk = $this->metaObject['PK'];
@@ -70,7 +70,7 @@ class Filter {
 
 				$fk = $this->metaObject['properties'][$prop]['FK'];
 
-				$table = $engine->getMetaObject()['tablename'];
+				$table = $engine->getMetaObject()['tableName'];
 
 				$subp = implode(".",$props);				
 
@@ -92,7 +92,7 @@ class Filter {
 
 			else {
 
-				$this->sqlFilter = $this->metaObject['properties'][$prop]['fieldname'];
+				$this->sqlFilter = $this->metaObject['properties'][$prop]['fieldName'];
 
 				$this->isIn = false;
 			}

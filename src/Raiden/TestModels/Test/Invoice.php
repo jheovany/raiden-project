@@ -1,6 +1,6 @@
 <?php
 
-namespace Raiden\TestModels;
+namespace Raiden\TestModels\Test;
 
 /**
  * @table invoice
