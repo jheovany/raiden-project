@@ -601,7 +601,7 @@ class Engine {
 
 					$pkValObj =	$reflectionProperty->getValue( $obj );
 					
-					$sql = 	"INSERT INTO $interTable ($leftTableFK, rightTableFK) 
+					$sql = 	"INSERT INTO $interTable ($leftTableFK, $rightTableFK) 
 							VALUES ($lastId, $pkValObj )";
 
 					$db = $this->connect;
