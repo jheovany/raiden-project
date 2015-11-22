@@ -1,6 +1,6 @@
 <?php // Archivo Raiden/TestModels/Person.php
 
-namespace Raiden\TestModels;
+namespace Raiden\TestModels\Test;
 
 /**
  * @table person
@@ -9,7 +9,7 @@ class Person {
 
 	/**
 	 * @PK
-	 * @field id
+	 * @field id @auto
 	 */
 	private $id;
 

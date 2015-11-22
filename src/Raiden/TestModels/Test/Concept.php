@@ -1,6 +1,6 @@
 <?php
 
-namespace Raiden\TestModels;
+namespace Raiden\TestModels\Test;
 
 /**
  * @table concept
@@ -9,7 +9,7 @@ class Concept {
 
 	/**
 	 * @PK 
-	 * @field id
+	 * @field id @auto
 	 */
 	private $id;
 

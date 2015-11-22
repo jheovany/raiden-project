@@ -1,6 +1,6 @@
 <?php
 
-namespace Raiden\TestModels;
+namespace Raiden\TestModels\Test;
 
 /**
  * @table invoice_details
@@ -9,19 +9,19 @@ class InvoiceDetails {
 
 	/**
 	 * @field id
-	 * @PK
+	 * @PK @auto
 	 */
 	private $id;
 
 	/**
 	 * @field id_invoice
-	 * @belongsto Raiden\TestModels\Invoice
+	 * @belongsTo Raiden\TestModels\Test\Invoice
 	 */
 	private $invoice;
 
 	/**
 	 * @field id_concept
-	 * @belongsTo Raiden\TestModels\Concept
+	 * @belongsTo Raiden\TestModels\Test\Concept
 	 */
 	private $concept;
 

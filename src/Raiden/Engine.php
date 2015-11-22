@@ -43,12 +43,7 @@ class Engine {
 		$this->initialize ( $modelClass );
 	}
 
-	public function initialize ( $modelClass, $master = true) {
-
-		$this->isMaster = $master;
-
-		/*echo 'master: ';
-		var_dump($this->isMaster);*/
+	public function initialize ( $modelClass ) {
 
 		$this->connect = (new DBConnector)->connector();
 
@@ -115,13 +110,14 @@ class Engine {
 				if (array_key_exists($c, $this->parentEngines)) {
 
 					$engine = $this->parentEngines[$c];
+					//$engine->addParentEngine( $this->metaObject['className'], $this);
 				}
 
 				else {
 
 					$engine = new Engine();
 					$engine->addParentEngine( $this->metaObject['className'], $this);
-					$engine->initialize( new $c, false);		
+					$engine->initialize( new $c);		
 				}
 
     			$this->metaObject['properties'][$propertyName]['metaObject'] = $engine->getMetaObject();
@@ -138,13 +134,14 @@ class Engine {
 				if (array_key_exists($c, $this->parentEngines)) {
 
 					$engine = $this->parentEngines[$c];
+					//$engine->addParentEngine( $this->metaObject['className'], $this);
 				}
 
 				else {
 
 					$engine = new Engine();
 					$engine->addParentEngine( $this->metaObject['className'], $this);
-					$engine->initialize( new $c , false);
+					$engine->initialize( new $c);
 				}
 
     			$this->metaObject['properties'][$propertyName]['metaObject'] = $engine->getMetaObject();
@@ -407,7 +404,13 @@ class Engine {
 
 	private function privateSave( $addVals = null ) {
 
+		$lastId;
+
 		$db = $this->connect;
+
+		$db->beginTransaction();
+
+		$driverName = $db->getAttribute(\PDO::ATTR_DRIVER_NAME);
 
 		$values = [];
 
@@ -415,6 +418,8 @@ class Engine {
 			$values[key($addVals)] = $addVals[key($addVals)];
 		}
 
+		echo 'aditional vals';
+		var_dump($values);
 
 		$insert = new InsertStatement;
 
@@ -422,19 +427,22 @@ class Engine {
 
 		foreach ($this->metaObject['properties'] as $property) {
 
-			if ( array_key_exists( 'ociseq', $property ) ) {
+			if ( $driverName == 'oci' ) { 
 
-				$seq = $property['ociseq'];
+				if ( array_key_exists( 'ociseq', $property ) ) {
 
-				$seq = "$seq.nextval";
-				
-				$values[ $this->metaObject['PK'] ] = $seq;
+					$seq = $property['ociseq'];
 
-				echo 'seq: ';
-				var_dump($seq);
+					$seq = "$seq.nextval";
+					
+					$values[ $this->metaObject['PK'] ] = $seq;
+
+					echo 'seq: ';
+					var_dump($seq);
+				}
 			}
 
-			if (array_key_exists( 'fieldName', $property ) and 
+			if (array_key_exists( 'fieldName', $property ) and
 				!array_key_exists( 'auto', $property ) and
 				!array_key_exists( 'ociseq', $property ) and
 				!array_key_exists( 'hasOne', $property ) and
@@ -460,23 +468,28 @@ class Engine {
 			if ( array_key_exists( 'belongsTo', $property ) and
 				!array_key_exists( 'through', $property ) ) {
 
-				$reflectionProperty = $this->reflectionClass->getProperty( $property['property'] );
-				$reflectionProperty->setAccessible(true);
+				$c = $property['belongsTo'];
 
-				$object = $reflectionProperty->getValue( $this->modelClass );
+				if (!array_key_exists($c, $this->parentEngines)) {
 
-				$objectEngine = new Engine( $object );
+					$reflectionProperty = $this->reflectionClass->getProperty( $property['property'] );
+					$reflectionProperty->setAccessible(true);
 
-				$ppk = $objectEngine->getMetaObject()['propertyPK'];
+					$object = $reflectionProperty->getValue( $this->modelClass );
 
-				$refClass = $objectEngine->getReflectionClass();
+					$objectEngine = $property['engine'];
+					$objectEngine->setModel($object);
 
-				$reflectionProperty2 = $refClass->getProperty( $ppk );
-				$reflectionProperty2->setAccessible(true);
+					$ppk = $objectEngine->getMetaObject()['propertyPK'];
 
-				$values[ $property['fieldName'] ] = $reflectionProperty2->getValue( $object ); 
+					$refClass = $objectEngine->getReflectionClass();
+
+					$reflectionProperty2 = $refClass->getProperty( $ppk );
+					$reflectionProperty2->setAccessible(true);
+
+					$values[ $property['fieldName'] ] = $reflectionProperty2->getValue( $object );
+				}
 			}
-
 		}
 
 		$sql = $insert->getInsert($values);
@@ -489,6 +502,7 @@ class Engine {
 
 		if	( !$statement->execute() ) {
 			var_dump( $statement->errorInfo() );
+			$db->rollBack();
 			return;
 		}
 
@@ -508,7 +522,7 @@ class Engine {
 
 				$lastId = $db->lastInsertId( $seq );
 			}
-
+			/*
 			if ( $driverName == 'oci' ) { 
 				
 				$table = $this->metaObject['tablename'];
@@ -527,96 +541,121 @@ class Engine {
 				$id = $statement->fetch();
 
 				$lastId = $id['ID'];
-			}
+			}*/
 		}
 
-		if ( array_key_exists('ociseq', $this->metaObject['properties'][$this->metaObject['propertyPK']] ) ) {
+		if ( $driverName == 'oci' ) {
+			if ( array_key_exists('ociseq', $this->metaObject['properties'][$this->metaObject['propertyPK']] ) ) {
 
-			$seq = $this->metaObject['properties'][$this->metaObject['property-pk']]['ociseq'];
-			
-			$querySeq = "select $seq.currval as last_id from dual";
+				$seq = $this->metaObject['properties'][$this->metaObject['propertyPK']]['ociseq'];
+				
+				$querySeq = "select $seq.currval as last_id from dual";
 
-			$statement = $db->prepare( $querySeq );
+				$statement = $db->prepare( $querySeq );
 
-			if	( !$statement->execute() ) {
-				var_dump( $statement->errorInfo() );
-				return;
+				if	( !$statement->execute() ) {
+					var_dump( $statement->errorInfo() );
+					$db->rollBack();
+					return;
+				}
+
+				$seqVal = $statement->fetch();
+				
+				$lastId = $seqVal['LAST_ID'];
 			}
-
-			$seqVal = $statement->fetch();
-			
-			$lastId = $seqVal['LAST_ID'];
 		}
 
 		foreach ($this->metaObject['properties'] as $property) {
 			
 			if (array_key_exists ( 'hasMany', $property ) and
 				!array_key_exists ( 'through', $property )) {
-				
-				$reflectionProperty = $this->reflectionClass->getProperty( $property['property'] );
-				$reflectionProperty->setAccessible(true);
 
-				$objects = $reflectionProperty->getValue( $this->modelClass );
+				$c = $property['hasMany'];
 
-				$value = [];
+				if (!array_key_exists($c, $this->parentEngines)) {
 
-				$value[$property['FK']] = $lastId;
-				
-				foreach ($objects as $obj) {
-					$engine = new Engine($obj);
+					$reflectionProperty = $this->reflectionClass->getProperty( $property['property'] );
+					$reflectionProperty->setAccessible(true);
 
-					$reflexionMethod = new \ReflectionMethod($engine, 'privateSave');
-					$reflexionMethod->setAccessible(true);
-					$reflexionMethod->invoke($engine, $value);
+					$objects = $reflectionProperty->getValue( $this->modelClass );
+
+					$value = [];
+
+					$value[$property['FK']] = $lastId;
+					
+					$e = $property['engine'];
+
+					foreach ($objects as $obj) {
+
+						$e->setModel($obj);
+
+						$reflexionMethod = new \ReflectionMethod($e, 'privateSave');
+						$reflexionMethod->setAccessible(true);
+						$reflexionMethod->invoke($e, $value);
+					}
 				}
 			}
 
 			/* Through */
 			if ((array_key_exists ( 'hasMany', $property ) and
 				array_key_exists ( 'through', $property ))) {
+
+				$c = $property['hasMany'];
+
+				if (!array_key_exists($c, $this->parentEngines)) {
 				
-				$reflectionProperty = $this->reflectionClass->getProperty( $property['property'] );
-				$reflectionProperty->setAccessible(true);
-
-				$objects = $reflectionProperty->getValue( $this->modelClass );
-
-				$pk = $this->metaObject['PK'];
-
-				$interTable_rightTableFK = explode(".", $property['through']);
-
-				$interTable = (string) array_shift($interTable_rightTableFK);
-					
-				$leftTableFK = $property['FK'];
-					
-				$rightTableFK = (string) array_shift($interTable_rightTableFK);
-
-				foreach ($objects as $obj) {
-
-					$engine = new Engine($obj);
-
-					$objPK = $engine->getMetaObject()['PK']; 
-					
-					$reflectionProperty = $this->reflectionClass->getProperty( $objPK );
+					$reflectionProperty = $this->reflectionClass->getProperty( $property['property'] );
 					$reflectionProperty->setAccessible(true);
 
-					$pkValObj =	$reflectionProperty->getValue( $obj );
+					$objects = $reflectionProperty->getValue( $this->modelClass );
+
+					$pk = $this->metaObject['PK'];
+
+					$interTable_rightTableFK = explode(".", $property['through']);
+
+					$interTable = (string) array_shift($interTable_rightTableFK);
+						
+					$leftTableFK = $property['FK'];
+						
+					$rightTableFK = (string) array_shift($interTable_rightTableFK);
 					
-					$sql = 	"INSERT INTO $interTable ($leftTableFK, $rightTableFK) 
-							VALUES ($lastId, $pkValObj )";
+					foreach ($objects as $obj) {
 
-					$db = $this->connect;
-					$statement = $db->prepare( $sql );
+						$engine = $property['engine'];
 
-					if	( !$statement->execute() ) {
+						$pk = $engine->getMetaObject()['propertyPK']; 
 
-						var_dump( $statement->errorInfo() );
-						return;
+						echo 'pk right table:';
+						var_dump($pk); 
+						
+						$reflectionProperty = $engine->getReflectionClass()->getProperty( $pk );
+						$reflectionProperty->setAccessible(true);
+
+						$pkVal = $reflectionProperty->getValue( $obj );
+						
+						$sql = 	"INSERT INTO $interTable ($leftTableFK, $rightTableFK)" .
+								" VALUES ($lastId, $pkVal )";
+
+						echo 'many to many insert:';
+						var_dump($sql);
+						
+						$db = $this->connect;
+						$statement = $db->prepare( $sql );
+
+						if	( !$statement->execute() ) {
+							var_dump( $statement->errorInfo() );
+							$db->rollBack();
+							return;
+						}
 					}
 				}
 			}
 		}
 
-		return $this->findByPK($lastId);
+		$db->commit();
+
+		$this->modelClass = $this->findByPK($lastId); 
+		return $this->modelClass;
 	}
 
 	public function modify() {
@@ -720,6 +759,11 @@ class Engine {
 	public function getModel() {
 
 		return $this->modelClass;
+	}
+
+	public function setModel( $model ) {
+
+		return $this->modelClass = $model;
 	}
 
 	public function getFetchedObjets() {

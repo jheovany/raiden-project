@@ -8,7 +8,9 @@ namespace Raiden\TestModels\Test;
 class Invoice {
 
 	/** 
-	 * @PK @field id @ociseq invoice_seq
+	 * @PK @field id 
+	 * @ociseq invoice_seq 
+	 * @auto
 	 */
 	private $id;
 
@@ -20,12 +22,12 @@ class Invoice {
 
 	/**
 	 * @field id_client
-	 * @belongsTo Raiden\TestModels\Client
+	 * @belongsTo Raiden\TestModels\Test\Client
 	 */
 	private $client;
 
 	/**
-	 * @hasMany Raiden\TestModels\InvoiceDetails
+	 * @hasMany Raiden\TestModels\Test\InvoiceDetails
 	 * @FK id_invoice
 	 */
 	private $details = [];
