@@ -508,7 +508,9 @@ class Engine {
 
 	private function privateSave( $addVals = null ) {
 
-		if ($this->modelClass->_MODEL_STATUS_ != 'NEW') { return; }
+		if (property_exists($this->modelClass, '_MODEL_STATUS_')) {
+			if ($this->modelClass->_MODEL_STATUS_ != 'NEW') { return; }
+		}
 
 		$lastId;
 
@@ -524,8 +526,8 @@ class Engine {
 			$values[key($addVals)] = $addVals[key($addVals)];
 		}
 
-		echo 'aditional vals';
-		var_dump($values);
+		/*echo 'aditional vals';
+		var_dump($values);*/
 
 		$insert = new InsertStatement;
 
@@ -542,9 +544,9 @@ class Engine {
 					$seq = "$seq.nextval";
 					
 					$values[ $this->metaObject['PK'] ] = $seq;
-
+					/*
 					echo 'seq: ';
-					var_dump($seq);
+					var_dump($seq);*/
 				}
 			}
 
@@ -800,7 +802,9 @@ class Engine {
 
 	public function modify() {
 
-		if ($this->modelClass->_MODEL_STATUS_ != 'SELECTED') { return; }
+		if (property_exists($this->modelClass, '_MODEL_STATUS_')) {
+			if ($this->modelClass->_MODEL_STATUS_ != 'SELECTED') { return; }
+		}
 
 		$update = new UpdateStatement;
 		$update->setTable($this->metaObject['tableName']);
@@ -872,7 +876,9 @@ class Engine {
 
 	public function destroy() {
 
-		if ($this->modelClass->_MODEL_STATUS_ != 'SELECTED') { return; }
+		if (property_exists($this->modelClass, '_MODEL_STATUS_')) {
+			if ($this->modelClass->_MODEL_STATUS_ != 'SELECTED') { return; }
+		}
 
 		foreach ($this->metaObject['properties'] as $property) {
 
