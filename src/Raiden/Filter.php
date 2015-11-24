@@ -213,7 +213,7 @@ class Filter {
 
 		}
 
-		var_dump($this->sqlFilter);
+		//var_dump($this->sqlFilter);
 
 		return $this->sqlFilter;
 	}

@@ -35,15 +35,9 @@ class UpdateStatement {
 			$values[$k] = $k.' = '.$d;
 		}
 
-		echo 'values';
-		var_dump($values);
-
 		$this->sqlStatements['update']['values'] = implode(', ',$values);
 		
 		$update = implode(' ',$this->sqlStatements['update']) . $cond;
-
-		echo 'update:';
-		var_dump($update);
 
 		return $update;
 	}

@@ -39,12 +39,6 @@ class InsertStatement  {
 			$values[] = $d;
 		}
 
-		echo 'keys:';
-		var_dump($columns);
-		echo 'values:';
-		var_dump($values);
-
-
 		//$this->sqlStatements['insert']['columns'] = implode( ', ' , $this->columns );
 		//$this->sqlStatements['insert']['values'] = implode( ', ' , $values );
 		
@@ -53,9 +47,6 @@ class InsertStatement  {
 		$this->sqlStatements['insert']['values'] = implode(', ',$values);
 		
 		$insert = implode(' ',$this->sqlStatements['insert']); 
-
-		echo 'insert:';
-		var_dump($insert);
 
 		return $insert;
 	}
