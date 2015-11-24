@@ -21,19 +21,23 @@ class Engine {
 
 	private $connect;
 
-	private $isJson = false;
+	//private $isJson = false;
 
 	private $filter;
 
-	private $isMaster = true;
+	//private $isMaster = true;
 
 	private $parentEngines = []; 
+
+	private $filterFields = [];
+
+	private $toJsonArrays;
 
 	function __construct ( ) {
 		
 		$a = func_get_args(); 
         $i = func_num_args(); 
-        if (method_exists($this,$f='__construct'.$i)) { 
+        if (method_exists($this,$f='__construct'.$i)) {
             call_user_func_array(array($this,$f),$a);
         } 
 	}
@@ -45,9 +49,13 @@ class Engine {
 
 	public function initialize ( $modelClass ) {
 
+		$this->filterFields = null;
+
 		$this->connect = (new DBConnector)->connector();
 
 		$this->modelClass = $modelClass;
+
+		$this->modelClass->_MODEL_STATUS_ = 'NEW';
 
 		$this->reflectionClass = new \ReflectionClass ( $this->modelClass );
 
@@ -123,6 +131,29 @@ class Engine {
     			$this->metaObject['properties'][$propertyName]['metaObject'] = $engine->getMetaObject();
     			$this->metaObject['properties'][$propertyName]['engine'] = $engine;
     		}
+
+    		if (array_key_exists( 'hasOne', $parameters->getParameters() )) {
+				
+				$this->metaObject['properties'][$propertyName]['hasOne'] = $parameters->getParameter('hasOne');
+
+				$c = $this->metaObject['properties'][$propertyName]['hasOne'];
+				
+				if (array_key_exists($c, $this->parentEngines)) {
+
+					$engine = $this->parentEngines[$c];
+					//$engine->addParentEngine( $this->metaObject['className'], $this);
+				}
+
+				else {
+
+					$engine = new Engine();
+					$engine->addParentEngine( $this->metaObject['className'], $this);
+					$engine->initialize( new $c);
+				}
+
+				$this->metaObject['properties'][$propertyName]['metaObject'] = $engine->getMetaObject();
+    			$this->metaObject['properties'][$propertyName]['engine'] = $engine;
+    		}
     		
     		if (array_key_exists( 'hasMany', $parameters->getParameters() )) {
 
@@ -154,9 +185,26 @@ class Engine {
 			}
 		}
 
-		//echo 'metaObject';
-		//var_dump($this->metaObject);
-	} 
+		//$this->fieldFilter[] = $this->metaObject['propertyPK'];
+
+		//echo 'fieldFilter';
+		//var_dump($this->fieldFilter);
+	}
+
+	public function getFetchedRows() {
+
+		return $this->fetchedRows;
+	}
+
+	public function setFilterFields( $filterArray ) {
+
+		$this->filterFields = $filterArray;
+	}
+
+	public function getJsonArray() {
+
+		return $this->toJsonArrays;
+	}
 
 	public function getMetaObject () { return $this->metaObject; }
 
@@ -180,8 +228,10 @@ class Engine {
 		return $this->findWhere($cond, true);
 	}
 
-	public function find() {
-		
+	public function find($filterFields = null) {
+
+		$this->filterFields = $filterFields;
+
 		if ($this->filter) {
 			return $this->findWhere($this->filter->getSqlFilter(), true);
 		} else {
@@ -189,12 +239,16 @@ class Engine {
 		}
 	}
 
-	public function findAll($limit = 100) {
+	public function findAll($limit = 100, $fields = null) {
+
+		$this->findfields = $fields;		
 
 		return $this->findWhere($limit, false, true);
 	}	
 
 	public function findWhere( $cond, $isWhere = false, $isLimit = false ) {
+
+		$this->toJsonArrays = null; 
 
 		$db = $this->connect;
 		$driverName = $db->getAttribute(\PDO::ATTR_DRIVER_NAME);
@@ -258,11 +312,22 @@ class Engine {
 
 		$className = $this->metaObject['className'];
 
-		foreach ($rows as $row) {
+		foreach ($rows as $k => $row) {
 				
 			$object = new $className;
 
+			$object->_MODEL_STATUS_ = 'SELECTED';
+
 			foreach ($this->metaObject['properties'] as $property) {
+
+				if ( $this->filterFields != null and 
+					!in_array( $property['property'], $this->filterFields )) {
+
+					echo 'fieldFilter exist';
+					var_dump($this->filterFields);
+
+					break;
+				}
 
 				if (array_key_exists( 'fieldName', $property ) and 
 					!array_key_exists( 'hasOne', $property ) and
@@ -278,12 +343,14 @@ class Engine {
 					}
 
 					$rc = new \ReflectionClass( $object );
-					
+						
 					$reflectionProperty = $rc->getProperty( $property['property'] );
 					$reflectionProperty->setAccessible(true);
 					$reflectionProperty->setValue( $object, $value);
+
+					$this->toJsonArrays[$k][$property['property']] = $value;
 				}
-				
+					
 				if (array_key_exists( 'belongsTo', $property )) {
 
 					$c = $property['belongsTo'];
@@ -293,32 +360,34 @@ class Engine {
 						if ( $driverName == 'oci' ) {
 
 							$fk = $row[strtoupper($property['fieldName'])];
-
+						
 						} else {
 
 							$fk = $row[$property['fieldName']];
 						}
 
 						$engine = $property['engine'];
-						/*
-						echo 'Engine';
-						var_dump($engine);
 
-						return;*/
+						if ($fk != null) {
 
-						$hasOneObject = $engine->findByPK( $fk );
+							$hasOneObject = $engine->findByPK( $fk );
 
-	 					$reflectionProperty = $this->reflectionClass->getProperty( $property['property'] );
-						$reflectionProperty->setAccessible(true);
-						$reflectionProperty->setValue( $object, $hasOneObject);
+								if ($hasOneObject != null) {
+									
+									$reflectionProperty = $this->reflectionClass->getProperty( $property['property'] );
+									$reflectionProperty->setAccessible(true);
+									$reflectionProperty->setValue( $object, $hasOneObject);
+
+									$this->toJsonArrays[$k][$property['property']] = $engine->getJsonArray();
+								}
+						}
 					}
 				}
 
-				if (array_key_exists( 'hasMany', $property ) and 
-					!array_key_exists( 'through', $property )) {
+				if (array_key_exists( 'hasOne', $property )) {
 
-					$c = $property['hasMany'];
-				
+					$c = $property['hasOne'];
+
 					if (!array_key_exists($c, $this->parentEngines)) {
 
 						$pk = $this->metaObject['PK'];
@@ -333,13 +402,46 @@ class Engine {
 
 							$value = $row[$pk];
 						}
-					
+						
 						$engine = $property['engine'];
 						$hasManyObjects	= $engine->findByFK("$fk = $value");
 
- 						$reflectionProperty = $this->reflectionClass->getProperty( $property['property'] );
+	 					$reflectionProperty = $this->reflectionClass->getProperty( $property['property'] );
 						$reflectionProperty->setAccessible(true);
 						$reflectionProperty->setValue( $object, $hasManyObjects);
+
+						$this->toJsonArrays[$k][$property['fieldName']] = $engine->getJsonArray();
+					}
+				}
+
+				if (array_key_exists( 'hasMany', $property ) and 
+					!array_key_exists( 'through', $property )) {
+
+					$c = $property['hasMany'];
+					
+					if (!array_key_exists($c, $this->parentEngines)) {
+
+						$pk = $this->metaObject['PK'];
+						$fk = $property['FK'];
+
+						if ($driverName == 'oci') {
+
+							$value = $row[strtoupper($pk)];
+						}
+
+						else {
+
+							$value = $row[$pk];
+						}
+						
+						$engine = $property['engine'];
+						$hasManyObjects	= $engine->findByFK("$fk = $value");
+
+	 					$reflectionProperty = $this->reflectionClass->getProperty( $property['property'] );
+						$reflectionProperty->setAccessible(true);
+						$reflectionProperty->setValue( $object, $hasManyObjects);
+
+						$this->toJsonArrays[$k][$property['property']] = $engine->getJsonArray();
 					}
 				}
 				/* Relacion muchos a muchos */
@@ -347,7 +449,7 @@ class Engine {
 					array_key_exists( 'through', $property )) {
 
 					$c = $property['hasMany'];
-				
+					
 					if (!array_key_exists($c, $this->parentEngines)) {
 
 						$pk = $this->metaObject['PK'];
@@ -355,9 +457,9 @@ class Engine {
 						$interTable_rightTableFK = explode(".", $property['through']);
 
 						$interTable = (string) array_shift($interTable_rightTableFK);
-						
+							
 						$leftTableFK = $property['FK'];
-						
+							
 						$rightTableFK = (string) array_shift($interTable_rightTableFK);
 
 						if ($driverName == 'oci') {
@@ -382,10 +484,12 @@ class Engine {
 						$reflectionProperty->setAccessible(true);
 						$reflectionProperty->setValue( $object, $hasManyObjects);
 
+						$this->toJsonArrays[$k][$property['property']] = $engine->getJsonArray();
+
 					}
 				}
 			}
-			
+
 			$this->fetchedObjects[] = $object; 	
 		}
 
@@ -404,11 +508,13 @@ class Engine {
 
 	private function privateSave( $addVals = null ) {
 
+		if ($this->modelClass->_MODEL_STATUS_ != 'NEW') { return; }
+
 		$lastId;
 
 		$db = $this->connect;
 
-		$db->beginTransaction();
+		//$db->beginTransaction();
 
 		$driverName = $db->getAttribute(\PDO::ATTR_DRIVER_NAME);
 
@@ -502,7 +608,7 @@ class Engine {
 
 		if	( !$statement->execute() ) {
 			var_dump( $statement->errorInfo() );
-			$db->rollBack();
+			//$db->rollBack();
 			return;
 		}
 
@@ -515,7 +621,7 @@ class Engine {
 
 			if ( $driverName == 'pgsql' ) {
 
-				$table = $this->metaObject['tablename'];
+				$table = $this->metaObject['tableName'];
 				$pk = $this->metaObject['PK'];
 
 				$seq = $table."_".$pk."_seq";
@@ -555,7 +661,7 @@ class Engine {
 
 				if	( !$statement->execute() ) {
 					var_dump( $statement->errorInfo() );
-					$db->rollBack();
+					//$db->rollBack();
 					return;
 				}
 
@@ -566,6 +672,34 @@ class Engine {
 		}
 
 		foreach ($this->metaObject['properties'] as $property) {
+
+			if (array_key_exists ( 'hasOne', $property )) {
+
+				$c = $property['hasOne'];
+
+				if (!array_key_exists($c, $this->parentEngines)) {
+
+					$reflectionProperty = $this->reflectionClass->getProperty( $property['property'] );
+					$reflectionProperty->setAccessible(true);
+
+					$object = $reflectionProperty->getValue( $this->modelClass );
+
+					if ($object != null) {
+
+						$value = [];
+
+						$value[$property['FK']] = $lastId;
+						
+						$e = $property['engine'];
+
+						$e->setModel($object);
+
+						$reflexionMethod = new \ReflectionMethod($e, 'privateSave');
+						$reflexionMethod->setAccessible(true);
+						$reflexionMethod->invoke($e, $value);
+					}
+				}
+			}
 			
 			if (array_key_exists ( 'hasMany', $property ) and
 				!array_key_exists ( 'through', $property )) {
@@ -579,19 +713,22 @@ class Engine {
 
 					$objects = $reflectionProperty->getValue( $this->modelClass );
 
-					$value = [];
+					if ($objects != null) {
 
-					$value[$property['FK']] = $lastId;
-					
-					$e = $property['engine'];
+						$value = [];
 
-					foreach ($objects as $obj) {
+						$value[$property['FK']] = $lastId;
+						
+						$e = $property['engine'];
 
-						$e->setModel($obj);
+						foreach ($objects as $obj) {
 
-						$reflexionMethod = new \ReflectionMethod($e, 'privateSave');
-						$reflexionMethod->setAccessible(true);
-						$reflexionMethod->invoke($e, $value);
+							$e->setModel($obj);
+
+							$reflexionMethod = new \ReflectionMethod($e, 'privateSave');
+							$reflexionMethod->setAccessible(true);
+							$reflexionMethod->invoke($e, $value);
+						}
 					}
 				}
 			}
@@ -609,50 +746,53 @@ class Engine {
 
 					$objects = $reflectionProperty->getValue( $this->modelClass );
 
-					$pk = $this->metaObject['PK'];
+					if ($objects != null) {
 
-					$interTable_rightTableFK = explode(".", $property['through']);
+						$pk = $this->metaObject['PK'];
 
-					$interTable = (string) array_shift($interTable_rightTableFK);
+						$interTable_rightTableFK = explode(".", $property['through']);
+
+						$interTable = (string) array_shift($interTable_rightTableFK);
+							
+						$leftTableFK = $property['FK'];
+							
+						$rightTableFK = (string) array_shift($interTable_rightTableFK);
 						
-					$leftTableFK = $property['FK'];
-						
-					$rightTableFK = (string) array_shift($interTable_rightTableFK);
-					
-					foreach ($objects as $obj) {
+						foreach ($objects as $obj) {
 
-						$engine = $property['engine'];
+							$engine = $property['engine'];
 
-						$pk = $engine->getMetaObject()['propertyPK']; 
+							$pk = $engine->getMetaObject()['propertyPK']; 
 
-						echo 'pk right table:';
-						var_dump($pk); 
-						
-						$reflectionProperty = $engine->getReflectionClass()->getProperty( $pk );
-						$reflectionProperty->setAccessible(true);
+							echo 'pk right table:';
+							var_dump($pk); 
+							
+							$reflectionProperty = $engine->getReflectionClass()->getProperty( $pk );
+							$reflectionProperty->setAccessible(true);
 
-						$pkVal = $reflectionProperty->getValue( $obj );
-						
-						$sql = 	"INSERT INTO $interTable ($leftTableFK, $rightTableFK)" .
-								" VALUES ($lastId, $pkVal )";
+							$pkVal = $reflectionProperty->getValue( $obj );
+							
+							$sql = 	"INSERT INTO $interTable ($leftTableFK, $rightTableFK)" .
+									" VALUES ($lastId, $pkVal )";
 
-						echo 'many to many insert:';
-						var_dump($sql);
-						
-						$db = $this->connect;
-						$statement = $db->prepare( $sql );
+							echo 'many to many insert:';
+							var_dump($sql);
+							
+							$db = $this->connect;
+							$statement = $db->prepare( $sql );
 
-						if	( !$statement->execute() ) {
-							var_dump( $statement->errorInfo() );
-							$db->rollBack();
-							return;
+							if	( !$statement->execute() ) {
+								var_dump( $statement->errorInfo() );
+								//$db->rollBack();
+								return;
+							}
 						}
 					}
 				}
 			}
 		}
 
-		$db->commit();
+		//$db->commit();
 
 		$this->modelClass = $this->findByPK($lastId); 
 		return $this->modelClass;
@@ -660,8 +800,10 @@ class Engine {
 
 	public function modify() {
 
+		if ($this->modelClass->_MODEL_STATUS_ != 'SELECTED') { return; }
+
 		$update = new UpdateStatement;
-		$update->setTable($this->metaObject['tablename']);
+		$update->setTable($this->metaObject['tableName']);
 
 		foreach ($this->metaObject['properties'] as $property) {
 
@@ -688,7 +830,7 @@ class Engine {
 
 				$object = $reflectionProperty->getValue( $this->modelClass );
 
-				$objectEngine = new Engine( $object );
+				$objectEngine = $property['engine'];
 
 				$ppk = $objectEngine->getMetaObject()['propertyPK'];
 
@@ -723,13 +865,60 @@ class Engine {
 			return true;
 		} else {
 			var_dump( $statement->errorInfo() );
+			
 			return false;
 		}
 	}
 
 	public function destroy() {
 
-		$table = $this->metaObject['tablename'];
+		if ($this->modelClass->_MODEL_STATUS_ != 'SELECTED') { return; }
+
+		foreach ($this->metaObject['properties'] as $property) {
+
+			if (array_key_exists ( 'hasOne', $property )) {
+
+				$c = $property['hasOne'];
+
+				if (!array_key_exists($c, $this->parentEngines)) {
+
+					$e = $property['engine'];
+
+					if (!$e->destroy()) {
+						return;
+					}
+				}
+			}
+
+			if (array_key_exists ( 'hasMany', $property )) {
+
+				$c = $property['hasMany'];
+
+				if (!array_key_exists($c, $this->parentEngines)) {
+
+					$reflectionProperty = $this->reflectionClass->getProperty( $property['property'] );
+					$reflectionProperty->setAccessible(true);
+
+					$objects = $reflectionProperty->getValue( $this->modelClass );
+
+					if ($objects != null) {
+
+						$e = $property['engine'];
+
+						foreach ($objects as $obj) {
+
+							$e->setModel($obj);
+
+							if (!$e->destroy()) {
+								return;
+							}
+						}
+					}
+				}
+			}
+		}
+/*********************************************************************************************/
+		$table = $this->metaObject['tableName'];
 
 		$ppk = $this->metaObject['propertyPK'];
 
@@ -771,9 +960,12 @@ class Engine {
 		return $this->fetchedObjects;
 	}
 
-	public function toJson ( $convert = true ) {
+	public function toJson ( ) {
 
+		$jsonEncoder = new JSonEncoder ();
+		$jsonEncoder->initialize( $this->toJsonArrays );
 
+		return $jsonEncoder->getJson();
 	}
 
 	public function fetch( $property ) {
