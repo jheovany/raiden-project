@@ -323,8 +323,8 @@ class Engine {
 				if ( $this->filterFields != null and 
 					!in_array( $property['property'], $this->filterFields )) {
 
-					echo 'fieldFilter exist';
-					var_dump($this->filterFields);
+					/*echo 'fieldFilter exist';
+					var_dump($this->filterFields);*/
 
 					break;
 				}
